@@ -1,0 +1,328 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// الـ ENUMs
+// ==========================================
+enum QueueStatus {
+  WAITING
+  CALLED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+
+enum DisplayState {
+  IDLE       // في الانتظار (لم يعرض بعد)
+  CURRENT    // يعرض الآن كأساسي
+  REPEAT     // يعاد نداؤه
+  ARCHIVED   // انتهى وذهب للسجل
+}
+
+enum VisitStatus {
+  DRAFT
+  COMPLETED
+  SIGNED
+}
+
+enum RelationType {
+  SELF
+  WIFE
+  HUSBAND
+  SON
+  DAUGHTER
+  FATHER
+  MOTHER
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RECEPTION
+  DOCTOR
+  DISPLAY
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  CALL
+  PRINT
+}
+
+enum DictionaryType {
+  COMPLAINT
+  DIAGNOSIS
+  MEDICATION
+  PROCEDURE
+  NOTE_TEMPLATE
+}
+
+// ==========================================
+// 1. نظام المستخدمين والصلاحيات
+// ==========================================
+model User {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  passwordHash   String
+  name           String
+  role           UserRole
+  isActive       Boolean  @default(true)
+  mustChangePass Boolean  @default(false)
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  doctor         Doctor?
+  auditLogs      AuditLog[]
+
+  @@index([username])
+}
+
+// ==========================================
+// 2. نظام الأطباء
+// ==========================================
+model Doctor {
+  id          String   @id @default(cuid())
+  name        String
+  specialty   String?
+  licenseNo   String?
+  stampUrl    String?
+  isActive    Boolean  @default(true)
+  
+  userId      String?  @unique 
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinics     DoctorClinic[]
+  tickets     QueueTicket[]
+  visits      Visit[]
+}
+
+model DoctorClinic {
+  id       String  @id @default(cuid())
+  doctorId String
+  clinicId String
+  doctor   Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinic   Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, clinicId])
+}
+
+// ==========================================
+// 3. نظام العائلات
+// ==========================================
+model Family {
+  id            String    @id @default(cuid())
+  familyCode    String    @unique 
+  primaryPhone  String    
+  primaryName   String    
+  address       String?
+  notes         String?
+  deletedAt     DateTime? 
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  patients      Patient[]
+
+  @@index([primaryPhone])
+}
+
+// ==========================================
+// 4. نظام المرضى
+// ==========================================
+model Patient {
+  id            String        @id @default(cuid())
+  fileNumber    String        @unique 
+  firstName     String
+  fatherName    String
+  lastName      String
+  fullName      String        
+  relation      RelationType  @default(SELF)
+  gender        Gender?       
+  birthDate     DateTime?     
+  phoneOptional String?
+  lastVisitAt   DateTime?     
+  deletedAt     DateTime?     
+  
+  familyId      String
+  family        Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tickets       QueueTicket[]
+  visits        Visit[]
+
+  @@index([firstName, fatherName, lastName])
+  @@index([fileNumber])
+  @@index([familyId])
+}
+
+// ==========================================
+// 5. الزيارات / السجل الطبي
+// ==========================================
+model Visit {
+  id              String      @id @default(cuid())
+  visitDate       DateTime    @default(now())
+  status          VisitStatus @default(DRAFT)
+  
+  complaint       String?  
+  diagnosis       String?  
+  notes           String?  
+  prescription    String?  // مؤقت، سيتم فصله لاحقاً إلى PrescriptionItem
+  
+  patientId       String
+  patient         Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  ticketId        String?     @unique 
+  ticket          QueueTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  createdByDoctorId String? 
+  doctor            Doctor?   @relation(fields: [createdByDoctorId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ==========================================
+// 6. نظام الطوابير
+// ==========================================
+model QueueTicket {
+  id           String       @id @default(cuid())
+  number       Int
+  fullNumber   String       @unique //   تم إضافته لمنع التكرار العالمي
+  status       QueueStatus  @default(WAITING)
+  displayState DisplayState @default(IDLE) //   تم تعديل الافتراضي إلى IDLE
+  calledAt     DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  clinicId     String
+  clinic       Clinic       @relation(fields: [clinicId], references: [id])
+
+  patientId    String?
+  patient      Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  doctorId     String?     
+  doctor       Doctor?      @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+
+  visit        Visit?
+  announcements AnnouncementHistory[] //   علاقة لسجل النداءات
+
+  @@unique([clinicId, number]) 
+  @@index([clinicId, status])
+}
+
+// ==========================================
+// 7. العيادات والعداد اليومي
+// ==========================================
+model Clinic {
+  id            String   @id @default(cuid())
+  name          String
+  nameAr        String   @default("")
+  prefix        String   @default("A")
+  audioKey      String   @unique 
+  currentNumber Int      @default(0) 
+  isActive      Boolean  @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tickets       QueueTicket[]
+  doctors       DoctorClinic[]
+  dailyCounters DailyQueueCounter[]
+  dictionaries  MedicalDictionary[]
+  announcements AnnouncementHistory[] //   علاقة لسجل النداءات
+}
+
+//   تم إصلاح مشكلة DateTime بإستخدام String (YYYY-MM-DD)
+model DailyQueueCounter {
+  id          String   @id @default(cuid())
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  counterDate String   // مثال: "2026-05-16"
+  lastNumber  Int      @default(0)
+
+  @@unique([clinicId, counterDate]) // عداد واحد لكل عيادة في اليوم
+}
+
+// ==========================================
+// 8. القواميس الطبية الديناميكية
+// ==========================================
+model MedicalDictionary {
+  id          String         @id @default(cuid())
+  type        DictionaryType 
+  displayName String         //   تم تغيير name إلى displayName
+  code        String?        //   لإضافة ICD mappings لاحقاً
+  isActive    Boolean        @default(true)
+  clinicId    String?        
+  clinic      Clinic?        @relation(fields: [clinicId], references: [id])
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([type, displayName])
+}
+
+// ==========================================
+// 9. سجل النداءات (محدث بالعلاقات)
+// ==========================================
+model AnnouncementHistory {
+  id            String       @id @default(cuid())
+  clinicId      String
+  clinic        Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  ticketId      String
+  ticket        QueueTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fullNumber    String
+  audioSequence Json?        //   لحفظ تسلسل الصوت وإعادة تشغيله
+  announcedAt   DateTime     @default(now())
+}
+
+// ==========================================
+// 10. إعدادات النظام (Key-Value Json)
+// ==========================================
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique 
+  value     Json     //   تحويل إلى Json لدعم الأرقام، البوليان، والمصفوفات
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 11. سجل المراجعة والتتبع (Json للقيم)
+// ==========================================
+model AuditLog {
+  id         String     @id @default(cuid())
+  userId     String?  
+  user       User?      @relation(fields: [userId], references: [id])
+  actionType ActionType 
+  entity     String   
+  entityId   String?  
+  ipAddress  String?  
+  device     String?  
+  oldValue   Json?     //   تحويل إلى Json للـ diffs المعقدة
+  newValue   Json?     //   تحويل إلى Json
+  createdAt  DateTime   @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

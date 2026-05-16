@@ -1,0 +1,64 @@
+.animated-number-wrapper {
+  perspective: 1000px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.huge-number {
+  font-size: 20rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+  font-family: 'Inter', sans-serif;
+  text-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+  position: relative;
+  display: inline-block;
+}
+
+/* Update Animation: Entry */
+.huge-number.animating {
+  animation: numberPulseGlow 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes numberPulseGlow {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.9);
+    filter: blur(10px);
+  }
+  50% {
+    text-shadow: 0 0 100px rgba(59, 130, 246, 1);
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Background Highlight Rings */
+.glow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 120%;
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.glow-ring.active {
+  animation: ringExpand 0.8s ease-out forwards;
+}
+
+@keyframes ringExpand {
+  0% { width: 40%; height: 40%; opacity: 1; }
+  100% { width: 140%; height: 140%; opacity: 0; }
+}

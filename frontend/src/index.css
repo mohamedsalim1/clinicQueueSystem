@@ -1,0 +1,13 @@
+/* index.css — Entry point: imports design system, sets global base */
+@import './styles/design-system.css';
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Smooth page transitions */
+#root { display: flex; flex-direction: column; }

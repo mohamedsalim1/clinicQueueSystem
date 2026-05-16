@@ -1,0 +1,223 @@
+/* TakeNumberCard.css */
+
+.take-number-card {
+  background: var(--clr-bg-card);
+  border-radius: var(--rad-lg);
+  border: 1px solid var(--clr-border);
+  box-shadow: var(--shd-md);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Header */
+.tnc-header {
+  display: flex; align-items: center; gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+.tnc-icon  { font-size: 2rem; }
+.tnc-title { font-size: 1.2rem; font-weight: 800; color: var(--clr-text-main); }
+.tnc-sub   { font-size: 0.8rem; color: var(--clr-text-muted); font-weight: 500; margin-top: 0.15rem; }
+
+/* Clinic Grid */
+.tnc-clinic-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.tnc-clinic-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.3rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--rad-sm);
+  border: 1.5px solid var(--clr-border);
+  background: var(--clr-bg-page);
+  cursor: pointer;
+  transition: all var(--tr-fast);
+}
+.tnc-clinic-btn:hover { border-color: var(--clr-primary); background: var(--clr-primary-light); }
+.tnc-clinic-btn.active {
+  border-color: var(--clr-primary);
+  background: var(--clr-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--clr-primary-glow);
+}
+.tnc-prefix {
+  font-size: 1.3rem; font-weight: 900;
+  background: rgba(0,0,0,.1);
+  border-radius: 6px;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tnc-clinic-btn.active .tnc-prefix { background: rgba(255,255,255,.25); }
+.tnc-cname { font-size: 0.78rem; font-weight: 700; text-align: center; line-height: 1.3; }
+
+/* Fields */
+.tnc-fields { display: flex; flex-direction: column; gap: 0.75rem; }
+.tnc-field  { display: flex; flex-direction: column; gap: 0.35rem; }
+.tnc-label  { font-size: 0.82rem; font-weight: 700; color: var(--clr-text-muted); }
+.tnc-optional { font-weight: 400; font-size: 0.75rem; }
+.tnc-input {
+  padding: 0.7rem 1rem;
+  font-family: var(--font-main);
+  font-size: 0.95rem; font-weight: 600;
+  color: var(--clr-text-main);
+  background: var(--clr-bg-page);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--rad-sm);
+  outline: none;
+  transition: border-color var(--tr-fast), box-shadow var(--tr-fast);
+  width: 100%;
+}
+.tnc-input:focus {
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px var(--clr-primary-glow);
+  background: #fff;
+}
+.tnc-input::placeholder { color: var(--clr-text-light); font-weight: 400; }
+
+/* Submit Button */
+.tnc-submit-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--clr-primary);
+  color: #fff;
+  font-family: var(--font-main);
+  font-size: 1rem; font-weight: 800;
+  border: none;
+  border-radius: var(--rad-sm);
+  cursor: pointer;
+  transition: all var(--tr-fast);
+}
+.tnc-submit-btn:hover:not(:disabled) {
+  background: var(--clr-primary-dark);
+  box-shadow: 0 6px 16px var(--clr-primary-glow);
+  transform: translateY(-1px);
+}
+.tnc-submit-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+.tnc-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Ticket Preview */
+.tnc-preview {
+  background: #fafafa;
+  border: 2px dashed var(--clr-border);
+  border-radius: var(--rad-md);
+  overflow: hidden;
+  animation: slideIn .3s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tnc-preview-header {
+  background: var(--clr-primary);
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
+}
+.tnc-preview-title  { font-size: 1rem; font-weight: 900; }
+.tnc-preview-clinic { font-size: 0.8rem; opacity: .85; margin-top: .2rem; }
+
+.tnc-preview-body {
+  text-align: center;
+  padding: 1.5rem 1rem 1rem;
+}
+.tnc-preview-label  { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--clr-text-muted); }
+.tnc-preview-number {
+  font-size: 3.5rem; font-weight: 900; color: var(--clr-text-main);
+  line-height: 1.1; letter-spacing: 3px;
+  margin: 0.5rem 0;
+}
+
+.tnc-preview-patient {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem; color: var(--clr-text-muted);
+}
+.tnc-preview-plabel { font-weight: 600; }
+
+.tnc-preview-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-top: 1px dashed var(--clr-border);
+  font-size: 0.82rem; color: var(--clr-text-muted);
+}
+.tnc-reprint-btn {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--rad-xs);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; transition: all var(--tr-fast);
+  font-family: var(--font-main);
+  color: var(--clr-text-muted);
+}
+.tnc-reprint-btn:hover { background: var(--clr-primary); color: #fff; border-color: var(--clr-primary); }
+
+/* Preview buttons group */
+.tnc-preview-btns {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.tnc-preview-sim-btn {
+  background: var(--clr-bg-card);
+  border-color: var(--clr-info, #0891b2);
+  color: var(--clr-info, #0891b2);
+}
+.tnc-preview-sim-btn:hover {
+  background: var(--clr-info, #0891b2);
+  color: #fff;
+  border-color: var(--clr-info, #0891b2);
+}
+
+/* ——— Selected Patient Box ——— */
+.tnc-selected-patient-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ecfdf5;
+  border: 1.5px solid var(--clr-success, #10b981);
+  border-radius: var(--rad-sm, 8px);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.tnc-sp-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #065f46;
+}
+
+.tnc-sp-file {
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.08);
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  color: #047857;
+}
+
+.tnc-sp-clear {
+  background: transparent;
+  color: #ef4444;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+}

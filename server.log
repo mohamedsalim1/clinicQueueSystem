@@ -1,0 +1,19 @@
+
+> darayyaclinic@1.0.0 start
+> node src/index.js
+
+[32minfo[39m: Server is running in development mode on port 3000 {"timestamp":"2026-05-11T18:48:50.120Z"}
+[32minfo[39m: [Socket] Client connected: 9U1yrMbZM_URpzGKAAAB {"timestamp":"2026-05-11T18:48:51.363Z"}
+[32minfo[39m: [Socket] 9U1yrMbZM_URpzGKAAAB joined display-global {"timestamp":"2026-05-11T18:48:51.386Z"}
+[32minfo[39m: 127.0.0.1 - - [11/May/2026:18:48:51 +0000] "GET /api/queue/display/all HTTP/1.1" 200 7545 "-" "curl/8.5.0" {"timestamp":"2026-05-11T18:48:51.804Z"}
+[32minfo[39m: [Socket] Client connected: _6NTSeqIiTWUFQcmAAAD {"timestamp":"2026-05-11T18:48:52.334Z"}
+[32minfo[39m: [Socket] _6NTSeqIiTWUFQcmAAAD joined display-global {"timestamp":"2026-05-11T18:48:52.348Z"}
+[32minfo[39m: [Socket] Client connected: sn_xoVGumwC97-SlAAAF {"timestamp":"2026-05-11T18:48:53.347Z"}
+[32minfo[39m: [Socket] sn_xoVGumwC97-SlAAAF joined display-global {"timestamp":"2026-05-11T18:48:53.372Z"}
+[32minfo[39m: [Socket] Client connected: 95u3it7wF7Ij9M54AAAH {"timestamp":"2026-05-11T18:48:54.334Z"}
+[32minfo[39m: [Socket] 95u3it7wF7Ij9M54AAAH joined clinic-1 {"timestamp":"2026-05-11T18:48:54.352Z"}
+[32minfo[39m: 127.0.0.1 - - [11/May/2026:18:49:03 +0000] "GET / HTTP/1.1" 404 139 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36" {"timestamp":"2026-05-11T18:49:03.196Z"}
+[32minfo[39m: [Socket] Client disconnected: 9U1yrMbZM_URpzGKAAAB (transport close) {"timestamp":"2026-05-11T18:49:23.402Z"}
+[32minfo[39m: [Socket] Client disconnected: sn_xoVGumwC97-SlAAAF (transport close) {"timestamp":"2026-05-11T18:50:17.527Z"}
+[32minfo[39m: [Socket] Client disconnected: 95u3it7wF7Ij9M54AAAH (transport close) {"timestamp":"2026-05-11T18:50:19.897Z"}
+[32minfo[39m: [Socket] Client disconnected: _6NTSeqIiTWUFQcmAAAD (transport close) {"timestamp":"2026-05-11T18:51:11.222Z"}

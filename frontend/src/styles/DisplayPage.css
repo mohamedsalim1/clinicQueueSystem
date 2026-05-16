@@ -1,0 +1,322 @@
+/* DisplayPage.css — شاشة عرض التلفزيون (Light Mode - Clinic Theme) */
+
+/* ——— Container ——— */
+.dp-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  height: 100vh;
+  background: #f0f4f8; /* أزرق رمادي فاتح جداً (خلفية عامة) */
+  color: #1e293b; /* رمادي داكن للنصوص */
+  overflow: hidden;
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+}
+
+/* ——— Header ——— */
+.dp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  flex-shrink: 0;
+}
+
+.dp-header-logo { display: flex; align-items: center; gap: 1rem; }
+.dp-header-icon { font-size: 2rem; }
+.dp-header-title { font-size: 1.4rem; font-weight: 900; color: #0f766e; } /* أزرق مخضر طبي */
+.dp-header-sub   { font-size: 0.8rem; color: #64748b; font-weight: 400; }
+
+/* Clock */
+.dp-clock { text-align: center; }
+.dp-time  { font-size: 2.2rem; font-weight: 900; color: #0f766e; letter-spacing: 2px; line-height: 1; }
+.dp-date  { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
+
+.dp-header-actions { display: flex; align-items: center; gap: 1rem; }
+
+/* Connection Indicator */
+.dp-conn-indicator {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.8rem; font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+}
+.dp-conn-indicator.ok  { background: #ecfdf5; color: #059669; }
+.dp-conn-indicator.err { background: #fef2f2; color: #dc2626; }
+.dp-conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.dp-conn-indicator.ok  .dp-conn-dot { background: #10b981; animation: blink 1.5s infinite; }
+.dp-conn-indicator.err .dp-conn-dot { background: #ef4444; }
+@keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+
+.dp-fs-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+.dp-fs-btn:hover { background: #e2e8f0; }
+
+/* ——— Last Call Banner ——— */
+.dp-last-call-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 2.5rem;
+  background: #fffbeb; /* خلفية صفراء فاتحة جداً */
+  border-bottom: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+.dp-lc-label   { font-size: 0.9rem; color: #92400e; font-weight: 600; }
+.dp-lc-number  { font-size: 2rem; font-weight: 900; color: #d97706; letter-spacing: 2px; } /* برتقالي هادئ */
+.dp-lc-clinic  { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+.dp-lc-patient { font-size: 0.95rem; color: #64748b; }
+
+/* ——— Clinics Grid ——— */
+.dp-clinics-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  align-content: start;
+}
+
+/* No data state */
+.dp-no-data {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1rem; padding: 4rem;
+  color: #94a3b8;
+}
+.dp-no-data-icon { font-size: 4rem; }
+.dp-no-data-text { font-size: 1.5rem; font-weight: 700; }
+.dp-no-data-sub  { font-size: 1rem; }
+
+/* ——— Clinic Card ——— */
+.dp-clinic-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: border-color .3s, box-shadow .3s, transform .3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+.dp-clinic-card.highlighted {
+  border-color: #d97706;
+  box-shadow: 0 0 20px rgba(217,119,6,0.15);
+  transform: scale(1.02);
+}
+.dp-clinic-card.flash {
+  animation: cardPulse 2s ease;
+}
+@keyframes cardPulse {
+  0%,100% { box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+  25%      { box-shadow: 0 0 30px rgba(217,119,6,0.25); }
+  75%      { box-shadow: 0 0 15px rgba(217,119,6,0.1); }
+}
+
+/* Card Header */
+.dp-card-header {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.dp-card-prefix {
+  width: 40px; height: 40px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; font-weight: 900; color: #0f766e;
+  flex-shrink: 0;
+}
+.dp-card-name {
+  font-size: 1.15rem; font-weight: 800; color: #0f172a;
+  flex: 1;
+}
+.dp-card-status {
+  font-size: 0.72rem; font-weight: 700;
+  padding: 0.2rem 0.6rem; border-radius: 99px;
+}
+.dp-card-status.calling { background: #fffbeb; color: #d97706; }
+.dp-card-status.waiting { background: #f0fdfa; color: #0f766e; }
+.dp-card-status.idle    { background: #f1f5f9; color: #94a3b8; }
+
+/* Called Section */
+.dp-called-section {
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+}
+.dp-called-label {
+  font-size: 0.75rem; font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+.dp-called-number {
+  font-size: 4rem; font-weight: 900;
+  color: #d97706; /* برتقالي طبي واضح */
+  line-height: 1;
+  letter-spacing: 3px;
+  transition: color .3s;
+}
+.dp-called-number.dp-flash-anim { animation: flashNum 0.5s ease 3; }
+@keyframes flashNum {
+  0%,100% { color: #d97706; }
+  50%      { color: #1e293b; } /* وميض باللون الداكن بدل الأبيض ليظهر في Light Mode */
+}
+.dp-idle-dash { color: #cbd5e1; font-size: 3rem; }
+.dp-called-patient {
+  margin-top: 0.5rem;
+  font-size: 0.9rem; color: #475569; font-weight: 600;
+}
+
+/* Waiting Section */
+.dp-waiting-label {
+  font-size: 0.75rem; font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+.dp-waiting-count { color: #94a3b8; }
+.dp-waiting-list {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+.dp-waiting-num {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: #0f766e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem; font-weight: 700;
+}
+.dp-waiting-more {
+  color: #94a3b8; font-size: 0.8rem;
+  padding: 0.25rem;
+}
+.dp-no-waiting { color: #cbd5e1; font-size: 0.85rem; }
+
+/* ——— Ticker Bar ——— */
+.dp-ticker-bar {
+  display: flex; align-items: center;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  height: 44px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.dp-ticker-label {
+  padding: 0 1.25rem;
+  font-size: 0.78rem; font-weight: 800;
+  color: #0f766e;
+  white-space: nowrap;
+  border-left: 1px solid #e2e8f0;
+}
+.dp-ticker-track {
+  flex: 1;
+  overflow: hidden;
+  direction: ltr;
+}
+.dp-ticker-content {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 0.9rem; font-weight: 600;
+  color: #475569;
+  animation: tickerScroll 38s linear infinite;
+  direction: rtl;
+  will-change: transform;
+}
+@keyframes tickerScroll {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100vw); }
+}
+
+/* ——— Fullscreen enlargement ——— */
+:fullscreen .dp-clinics-grid { gap: 2rem; padding: 2rem 3rem; }
+:fullscreen .dp-called-number { font-size: 6rem; }
+:fullscreen .dp-clinic-card { padding: 2rem; }
+
+@media (min-width: 1600px) {
+  .dp-header { padding: 1.2rem 3rem; }
+  .dp-header-title { font-size: 1.8rem; }
+  .dp-time { font-size: 3rem; }
+  .dp-clinics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 2rem;
+    padding: 2rem 3rem;
+  }
+  .dp-card-name { font-size: 1.5rem; }
+  .dp-called-number { font-size: 5.8rem; }
+  .dp-waiting-num { font-size: 1.15rem; padding: 0.35rem 0.9rem; }
+}
+
+@media (max-width: 900px) {
+  .dp-header {
+    padding: 0.8rem 1rem;
+    gap: 1rem;
+  }
+  .dp-header-sub,
+  .dp-date,
+  .dp-conn-indicator {
+    display: none;
+  }
+  .dp-time { font-size: 1.6rem; }
+  .dp-clinics-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .dp-last-call-banner {
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .dp-called-number { font-size: 3.4rem; }
+  .dp-ticker-bar { height: 38px; }
+}
+
+/* ——— زر تفعيل الصوت (تم إخراجه من الميديا كيوري ليكون عاماً) ——— */
+.dp-enable-sound-btn {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 30px;
+  font-size: 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  z-index: 9999;
+  animation: pulse 2s infinite;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+}
+
+.dp-enable-sound-btn:hover {
+  background: #dc2626;
+}
+
+@keyframes pulse {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}

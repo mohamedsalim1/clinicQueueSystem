@@ -1,0 +1,254 @@
+/* =============================================================
+   ThermalPrintPreview.css
+   محاكاة بصرية لورق الطابعة الحرارية 80mm
+   ============================================================= */
+
+/* ——— Overlay ——— */
+.tpp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tppFadeIn 0.2s ease;
+  padding: 1rem;
+}
+@keyframes tppFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ——— Modal Container ——— */
+.tpp-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  animation: tppSlideUp 0.25s ease;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+@keyframes tppSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ——— Toolbar ——— */
+.tpp-toolbar {
+  width: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1e293b;
+  border-radius: 12px 12px 0 0;
+  padding: 0.6rem 1rem;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 0.5rem;
+}
+.tpp-toolbar-title {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  flex: 1;
+  direction: rtl;
+}
+.tpp-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.tpp-btn-print {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-main, 'Cairo', sans-serif);
+  transition: background 0.15s;
+}
+.tpp-btn-print:hover { background: #1d4ed8; }
+
+.tpp-btn-close {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.tpp-btn-close:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+/* ——— Printer Body ——— */
+.tpp-printer-body {
+  width: 380px;
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+  padding: 1rem 1.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+.tpp-printer-slot {
+  width: 240px;
+  height: 10px;
+  background: #0f172a;
+  border-radius: 3px 3px 0 0;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+}
+
+/* ——— Paper Wrap ——— */
+.tpp-paper-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ——— Thermal Paper ——— */
+.tpp-paper {
+  width: 380px;
+  background: #fffef9;
+  /* ظل يعطي إحساس الورق المطبوع */
+  box-shadow:
+    0 4px 6px rgba(0,0,0,.06),
+    4px 0 0 #f0ede5,
+    -4px 0 0 #f0ede5,
+    0 0 0 1px #e8e4da;
+  padding: 1.5rem 2rem;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  /* الورق الحراري له حواف قليلة الشفافية */
+  border-left: 6px solid #f0ede5;
+  border-right: 6px solid #f0ede5;
+  /* حبر خفيف كطابعة حرارية */
+  letter-spacing: 0.3px;
+}
+
+/* ——— Typography helpers ——— */
+.tpp-center { text-align: center; }
+.tpp-right  { text-align: right;  }
+.tpp-left   { text-align: left;   }
+.tpp-bold   { font-weight: 700;   }
+
+.tpp-section {
+  display: block;
+  width: 100%;
+  direction: rtl;
+}
+
+.tpp-spacer {
+  height: 6px;
+}
+
+/* ——— Sizes ——— */
+.tpp-title-lg {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  font-family: var(--font-main, 'Cairo', sans-serif);
+}
+.tpp-subtitle {
+  font-size: 11px;
+  color: #444;
+  font-family: 'Courier New', monospace;
+}
+.tpp-clinic-name {
+  font-size: 14px;
+  font-family: var(--font-main, 'Cairo', sans-serif);
+}
+.tpp-label-sm {
+  font-size: 11px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ——— الرقم الكبير ——— */
+.tpp-number-xl {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  line-height: 1.1;
+  font-family: 'Courier New', monospace;
+  padding: 0.4rem 0;
+  /* مؤثر الطابعة الحرارية: حبر بارز */
+  text-shadow: 1px 1px 0 rgba(0,0,0,.15);
+}
+
+/* ——— Dividers ——— */
+.tpp-divider {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #555;
+  overflow: hidden;
+  white-space: nowrap;
+  direction: ltr;
+  margin: 2px 0;
+}
+
+/* ——— Footer Message ——— */
+.tpp-footer-msg {
+  font-size: 11px;
+  color: #444;
+  font-family: var(--font-main, 'Cairo', sans-serif);
+  line-height: 1.7;
+}
+
+/* ——— خط القطع ——— */
+.tpp-cut-line {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  direction: ltr;
+  padding: 0.5rem 0 0;
+}
+.tpp-cut-icon {
+  font-size: 14px;
+  color: #999;
+  flex-shrink: 0;
+}
+.tpp-cut-dashes {
+  flex: 1;
+  border-top: 1.5px dashed #bbb;
+  margin-top: 1px;
+}
+
+/* ——— ذيل الورق (يخرج من الطابعة) ——— */
+.tpp-paper-wrap::after {
+  content: '';
+  display: block;
+  width: 380px;
+  height: 18px;
+  background: linear-gradient(180deg, #fffef9 0%, #f0ede5 100%);
+  border-left: 6px solid #f0ede5;
+  border-right: 6px solid #f0ede5;
+  border-bottom: 3px solid #e0dbd0;
+  box-shadow: 0 4px 8px rgba(0,0,0,.12);
+}
+
+/* ——— Print Media ——— */
+@media print {
+  .tpp-overlay { background: transparent; }
+  .tpp-modal   { box-shadow: none; }
+  .tpp-toolbar,
+  .tpp-printer-body,
+  .tpp-paper-wrap::after { display: none; }
+  .tpp-paper {
+    width: 80mm;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+  }
+  .tpp-number-xl { font-size: 36px; }
+}
