@@ -1,0 +1,55 @@
+/* SmartDropdown.css - القائمة المنسدلة الاحترافية */
+.sdd-container {
+  position: relative;
+  width: 100%;
+}
+
+.sdd-label {
+  display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.35rem;
+}
+.sdd-required { color: #dc2626; }
+
+.sdd-input-wrapper {
+  position: relative; display: flex; align-items: center;
+}
+
+.sdd-input {
+  width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.8rem; border: 1.5px solid #cbd5e1; border-radius: 6px;
+  font-size: 0.9rem; background: #f8fafc; color: #0f172a; font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.sdd-input:focus {
+  outline: none; border-color: #2563eb; background: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+.sdd-toggle {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 0.7rem; padding: 4px;
+}
+
+.sdd-menu {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 220px; overflow-y: auto;
+  margin-top: 4px;
+}
+
+.sdd-option {
+  padding: 0.6rem 1rem; cursor: pointer; font-size: 0.9rem; color: #334155;
+  transition: background 0.15s;
+}
+.sdd-option:hover { background: #f1f5f9; }
+.sdd-option.active { background: #e0f2fe; color: #0369a1; font-weight: 600; }
+
+.sdd-empty {
+  padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.85rem;
+}
+
+.sdd-add-option {
+  color: #0f766e; font-weight: 700; border-top: 1px dashed #cbd5e1; margin-top: 4px; padding-top: 0.8rem;
+}
+.sdd-add-option:hover { background: #ecfdf5; }
+.sdd-plus { 
+  background: #0f766e; color: #fff; border-radius: 50%; width: 18px; height: 18px; 
+  display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; margin-left: 0.5rem;
+}

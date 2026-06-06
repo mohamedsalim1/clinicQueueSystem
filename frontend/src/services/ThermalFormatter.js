@@ -14,7 +14,7 @@ const ESC  = '\x1B';
 const GS   = '\x1D';
 const LF   = '\x0A';
 const INIT = ESC + '@';         // إعادة تهيئة الطابعة
-const CODEPAGE_ARABIC = ESC + 't\x16'; // CP864 على كثير من طابعات ESC/POS
+const CODEPAGE_ARABIC = ESC + 't\x22'; // WPC1256 (Arabic Page 34) على كثير من طابعات ESC/POS
 
 // ——— المحاذاة ———
 const ALIGN_CENTER = ESC + 'a\x01';
@@ -90,8 +90,8 @@ export const formatTicket = (ticketData, printerWidth = '80mm') => {
   const footerMsg      = settings.footerMsg      || 'يرجى انتظار ظهور رقمك على شاشة العرض';
 
   const now  = new Date();
-  const date = now.toLocaleDateString('ar-SA');
-  const time = now.toLocaleTimeString('ar-SA', { hour12: false });
+  const date = now.toLocaleDateString('en-GB'); // DD/MM/YYYY بأرقام إنجليزية
+  const time = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:MM:SS بأرقام إنجليزية
 
   const cols = printerWidth === '80mm' ? 32 : 24;
 
@@ -136,7 +136,7 @@ export const formatTicket = (ticketData, printerWidth = '80mm') => {
   // ——— 6. اسم المريض (إن وجد) ———
   if (patientName) {
     cmds.push(divider('-', cols) + LF);
-    cmds.push(ALIGN_RIGHT);
+    cmds.push(ALIGN_CENTER);
     cmds.push('اسم المريض:' + LF);
     cmds.push(BOLD_ON);
     chunkText(patientName, cols - 4).forEach((line) => cmds.push(line + LF));
@@ -145,7 +145,7 @@ export const formatTicket = (ticketData, printerWidth = '80mm') => {
 
   // ——— 7. عدد المنتظرين ———
   cmds.push(divider('-', cols) + LF);
-  cmds.push(ALIGN_RIGHT);
+  cmds.push(ALIGN_CENTER);
   cmds.push(`المنتظرون أمامك: ${waitingAhead}` + LF);
 
   // ——— 8. الوقت والتاريخ ———

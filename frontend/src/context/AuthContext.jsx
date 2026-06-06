@@ -3,45 +3,45 @@ import apiClient from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // لمنع وميض صفحة اللوجين عند عمل Refresh
+  const [loading, setLoading] = useState(true); // بداية true لمنع الـ Flashing
 
   useEffect(() => {
-    // التحقق مما إذا كان المستخدم مسجلاً الدخول عند فتح التطبيق
-    const storedUser = localStorage.getItem('clinic_user');
-    const storedToken = localStorage.getItem('clinic_token');
-    
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await apiClient.get('/auth/me');
+          setUser(res.data);
+        } catch (error) {
+          // ✨ إذا فشل الطلب، فقط امسح التوكن ولا ترمي خطأ يكسر التطبيق
+          console.warn('Session expired or invalid, logging out.');
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      }
+      setLoading(false); // انتهاء التحقق سواء نجح أو فشل
+    };
+
+    checkAuth();
   }, []);
 
-  const login = async (username, password) => {
-    const response = await apiClient.post('/auth/login', { username, password });
-    const { token, user: userData } = response.data;
-    
-    localStorage.setItem('clinic_token', token);
-    localStorage.setItem('clinic_user', JSON.stringify(userData));
+  const login = async (token, userData) => {
+    localStorage.setItem('token', token);
     setUser(userData);
-    
-    return userData;
   };
 
   const logout = () => {
-    localStorage.removeItem('clinic_token');
-    localStorage.removeItem('clinic_user');
+    localStorage.removeItem('token');
     setUser(null);
   };
 
-  const value = { user, login, logout, loading };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

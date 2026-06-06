@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../services/apiClient';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -17,15 +18,22 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const userData = await login(username, password);
+      const res = await apiClient.post('/auth/login', { username, password });
+      await login(res.data.token, res.data.user);
+      
       // توجيه المستخدم بناءً على دوره (Role)
-      if (userData.role === 'DOCTOR') {
+      if (res.data.user.role === 'DOCTOR') {
         navigate('/doctor');
       } else {
         navigate('/reception');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'فشل تسجيل الدخول');
+      setError(
+        err.response?.data?.message
+        || err.response?.data?.error?.message
+        || err.message
+        || 'فشل تسجيل الدخول'
+      );
     } finally {
       setIsLoading(false);
     }

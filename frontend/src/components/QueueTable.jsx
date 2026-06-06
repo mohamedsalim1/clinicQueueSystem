@@ -4,6 +4,8 @@
 import '../styles/QueueTable.css';
 
 import React, { useMemo } from 'react';
+import queueService from '../services/queueService';
+import { useToast } from '../context/ToastContext';
 
 // ✨ تعديل المفاتيح لتطابق الـ Enum القادم من الباك إند (أحرف كبيرة)
 const STATUS_MAP = {
@@ -15,7 +17,19 @@ const STATUS_MAP = {
   CANCELLED:   { label: 'ملغي',        cls: 'badge-cancelled' },
 };
 
-const QueueTable = ({ items = [], isLoading, searchTerm = '', onSearchChange, clinicName }) => {
+const QueueTable = ({ items = [], isLoading, searchTerm = '', onSearchChange, clinicName, onViewPatientFile }) => {
+  const { addToast } = useToast();
+
+  const handleCompleteFastQueue = async (clinicId) => {
+    try {
+      await queueService.completePatient(clinicId);
+      addToast('تم إتمام الدور السريع بنجاح', 'success');
+      // No need to manually refresh here, socket should handle it or parent will
+    } catch (err) {
+      addToast('فشل إتمام الدور', 'error');
+    }
+  };
+
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return items;
     const term = searchTerm.toLowerCase();
@@ -71,6 +85,7 @@ const QueueTable = ({ items = [], isLoading, searchTerm = '', onSearchChange, cl
                 <th>رقم الهاتف</th>
                 <th>الحالة</th>
                 <th>الوقت</th>
+                <th>إجراءات</th> {/* ✨ العمود الجديد */}
               </tr>
             </thead>
             <tbody>
@@ -93,6 +108,46 @@ const QueueTable = ({ items = [], isLoading, searchTerm = '', onSearchChange, cl
                         ? new Date(t.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
                         : '—'}
                     </td>
+                    {/* ✨ خلية الإجراءات والزر الجديد */}
+                    <td>
+                      {t.patientId ? (
+                        <button 
+                          className="btn" 
+                          style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '0.25rem 0.6rem', 
+                            background: '#dbeafe', 
+                            color: '#1e40af', 
+                            border: '1px solid #93c5fd',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => onViewPatientFile && onViewPatientFile(t)} 
+                          title="عرض الملف الطبي للمريض"
+                        >
+                          📁 ملف
+                        </button>
+                      ) : (
+                        t.status === 'CALLED' || t.status === 'IN_PROGRESS' || t.status === 'WAITING' ? (
+                           <button 
+                             className="btn" 
+                             style={{ 
+                               fontSize: '0.75rem', 
+                               padding: '0.25rem 0.6rem', 
+                               background: '#d1fae5', 
+                               color: '#065f46', 
+                               border: '1px solid #6ee7b7',
+                               borderRadius: '4px',
+                               cursor: 'pointer'
+                             }}
+                             onClick={() => handleCompleteFastQueue(t.clinicId)}
+                             title="إتمام وإنهاء الدور السريع"
+                           >
+                             ✅ إتمام
+                           </button>
+                        ) : null
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -104,4 +159,4 @@ const QueueTable = ({ items = [], isLoading, searchTerm = '', onSearchChange, cl
   );
 };
 
-export default QueueTable;
+export default QueueTable;  

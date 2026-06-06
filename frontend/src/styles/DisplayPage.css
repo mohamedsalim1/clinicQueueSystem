@@ -31,9 +31,17 @@
 .dp-header-sub   { font-size: 0.8rem; color: #64748b; font-weight: 400; }
 
 /* Clock */
-.dp-clock { text-align: center; }
+.dp-clock { text-align: center; min-width: 290px; }
 .dp-time  { font-size: 2.2rem; font-weight: 900; color: #0f766e; letter-spacing: 2px; line-height: 1; }
-.dp-date  { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
+.dp-date  {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+  line-height: 1.25;
+}
 
 .dp-header-actions { display: flex; align-items: center; gap: 1rem; }
 
@@ -52,6 +60,16 @@
 .dp-conn-indicator.ok  .dp-conn-dot { background: #10b981; animation: blink 1.5s infinite; }
 .dp-conn-indicator.err .dp-conn-dot { background: #ef4444; }
 @keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+
+.dp-page-indicator {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid #bfdbfe;
+}
 
 .dp-fs-btn {
   background: #f1f5f9;
@@ -84,10 +102,10 @@
 .dp-clinics-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr); /* ← تعديل: 4 أعمدة بعرض متساوي */
   gap: 1.5rem;
   padding: 1.5rem 2rem;
-  overflow-y: auto;
+  overflow-y: auto; /* ← تعديل: السماح بسكرول عمودي إذا زاد ارتفاع البطاقات عن الشاشة */
   align-content: start;
 }
 
@@ -120,15 +138,6 @@
   box-shadow: 0 0 20px rgba(217,119,6,0.15);
   transform: scale(1.02);
 }
-.dp-clinic-card.flash {
-  animation: cardPulse 2s ease;
-}
-@keyframes cardPulse {
-  0%,100% { box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
-  25%      { box-shadow: 0 0 30px rgba(217,119,6,0.25); }
-  75%      { box-shadow: 0 0 15px rgba(217,119,6,0.1); }
-}
-
 /* Card Header */
 .dp-card-header {
   display: flex; align-items: center; gap: 0.75rem;
@@ -175,15 +184,57 @@
   letter-spacing: 3px;
   transition: color .3s;
 }
-.dp-called-number.dp-flash-anim { animation: flashNum 0.5s ease 3; }
-@keyframes flashNum {
-  0%,100% { color: #d97706; }
-  50%      { color: #1e293b; } /* وميض باللون الداكن بدل الأبيض ليظهر في Light Mode */
-}
 .dp-idle-dash { color: #cbd5e1; font-size: 3rem; }
 .dp-called-patient {
   margin-top: 0.5rem;
   font-size: 0.9rem; color: #475569; font-weight: 600;
+}
+
+/* ——— Call Popup ——— */
+.dp-call-popup-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.22);
+  animation: popupBackdropIn .18s ease-out;
+}
+
+.dp-call-popup {
+  width: min(560px, 94vw);
+  background: #ffffff;
+  border: 2px solid #d97706;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: callPopupIn .24s ease-out;
+}
+
+.dp-popup-called-section {
+  padding: 1.4rem;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.dp-popup-number {
+  font-size: clamp(5rem, 14vw, 8.5rem);
+}
+
+@keyframes popupBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes callPopupIn {
+  from { opacity: 0; transform: translateY(20px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Waiting Section */
@@ -256,7 +307,7 @@
   .dp-header-title { font-size: 1.8rem; }
   .dp-time { font-size: 3rem; }
   .dp-clinics-grid {
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    grid-template-columns: repeat(4, 1fr); /* ← تعديل: 4 أعمدة */
     gap: 2rem;
     padding: 2rem 3rem;
   }
@@ -277,7 +328,7 @@
   }
   .dp-time { font-size: 1.6rem; }
   .dp-clinics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr); /* ← تعديل: عمودين للشاشات الصغيرة */
     gap: 1rem;
     padding: 1rem;
   }
@@ -314,6 +365,8 @@
 .dp-enable-sound-btn:hover {
   background: #dc2626;
 }
+
+
 
 @keyframes pulse {
   0% { transform: translateX(-50%) scale(1); }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getSocketBaseURL } from '../config/network';
 
 const SocketContext = createContext(null);
 
@@ -10,10 +11,7 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // تحديد رابط السيرفر
-    const URL = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') 
-      : `${window.location.protocol}//${window.location.hostname}:3000`;
+    const URL = getSocketBaseURL();
 
     console.log('[Socket] Connecting to:', URL);
 

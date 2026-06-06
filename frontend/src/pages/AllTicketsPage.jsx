@@ -9,6 +9,8 @@ import '../styles/QueueTable.css';
 import '../styles/ReceptionPage.css';
 
 const getBackendUrl = () => {
+  const savedHost = typeof window !== 'undefined' ? localStorage.getItem('host_ip') : null;
+  if (savedHost) return `http://${savedHost}:3000`;
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api$/, '');
   if (typeof window !== 'undefined' && window.__TAURI__) return 'http://localhost:3000';
   if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:3000`;

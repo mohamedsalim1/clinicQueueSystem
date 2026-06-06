@@ -1,0 +1,74 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "مركز داريا الطبي - خادم الإدارة والعيادات",
+  "version": "1.0.0",
+  "identifier": "com.darayya.clinic.host",
+  "build": {
+    "beforeBuildCommand": "npm run build:host",
+    "beforeDevCommand": "npm run dev:host",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "مركز داريا الطبي - خادم الإدارة والعيادات",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "appimage", "deb"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "../../src/**/*",
+      "../../prisma/**/*",
+      "../../package.json",
+      "../../.env",
+      "../../node_modules/**/*",
+      "../dist/**/*"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": null,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libappindicator3-1", "librsvg2-common"],
+        "files": {
+          "/usr/share/applications/com.darayya.clinic.desktop": "assets/com.darayya.clinic.desktop",
+          "/usr/share/icons/hicolor/512x512/apps/com.darayya.clinic.png": "assets/512x512.png"
+        }
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": false
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "مركز داريا الطبي - جهاز الاستقبال والطباعة",
+  "version": "1.0.0",
+  "identifier": "com.darayya.clinic.reception",
+  "build": {
+    "beforeBuildCommand": "npm run build:reception",
+    "beforeDevCommand": "npm run dev:reception",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "مركز داريا الطبي - جهاز الاستقبال والطباعة",
+        "width": 1024,
+        "height": 768,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": true,
+        "devtools": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "appimage", "deb"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": null,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libappindicator3-1", "librsvg2-common"],
+        "files": {
+          "/usr/share/applications/com.darayya.clinic.desktop": "assets/com.darayya.clinic.desktop",
+          "/usr/share/icons/hicolor/512x512/apps/com.darayya.clinic.png": "assets/512x512.png"
+        }
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": false
+    }
+  }
+}

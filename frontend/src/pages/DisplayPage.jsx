@@ -13,16 +13,54 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import useVoiceAnnouncements from '../hooks/useVoiceAnnouncements';
 import { useSocket } from '../context/SocketContext';
 import queueService from '../services/queueService';
+import { getApiBaseURL } from '../config/network';
+import logger from '../utils/logger';
 import '../styles/DisplayPage.css';
 
-const getBackendUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api$/, '');
-  if (typeof window !== 'undefined' && window.__TAURI__) return 'http://localhost:3000';
-  if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:3000`;
-  return 'http://localhost:3000';
-};
+const API = getApiBaseURL();
+const CALL_POPUP_DURATION_MS = 6500;
+const CALL_HIGHLIGHT_DURATION_MS = 3000;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const HIJRI_MONTHS = [
+  'محرم',
+  'صفر',
+  'ربيع الأول',
+  'ربيع الآخر',
+  'جمادى الأولى',
+  'جمادى الآخرة',
+  'رجب',
+  'شعبان',
+  'رمضان',
+  'شوال',
+  'ذو القعدة',
+  'ذو الحجة'
+];
 
-const API = `${getBackendUrl()}/api`;
+const arabicNumber = new Intl.NumberFormat('ar-SA', { useGrouping: false });
+
+const getDatePart = (parts, type) => parts.find(part => part.type === type)?.value;
+
+const formatHijriDate = (date) => {
+  const parts = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  }).formatToParts(date);
+
+  const day = Number(getDatePart(parts, 'day'));
+  const month = Number(getDatePart(parts, 'month'));
+  const year = Number(getDatePart(parts, 'year'));
+
+  if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
+    return date.toLocaleDateString('ar-SA-u-ca-islamic-umalqura', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  return `${arabicNumber.format(day)} ${HIJRI_MONTHS[month - 1]} ${arabicNumber.format(year)} هـ`;
+};
 
 // ——— ساعة رقمية ———
 const Clock = () => {
@@ -31,13 +69,24 @@ const Clock = () => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const gregorianDate = time.toLocaleDateString('ar-SY-u-ca-gregory', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const hijriDate = formatHijriDate(time);
+
   return (
     <div className="dp-clock">
       <div className="dp-time">
         {time.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
       </div>
       <div className="dp-date">
-        {time.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        <span>هجري: {hijriDate}</span>
+        <span>ميلادي: {gregorianDate}</span>
       </div>
     </div>
   );
@@ -46,21 +95,9 @@ const Clock = () => {
 // ——— بطاقة عيادة واحدة ———
 const ClinicCard = ({ clinicState, isHighlighted }) => {
   const { clinic, calledTicket, waitingTickets, waitingCount } = clinicState;
-  const prevCalledRef = useRef(null);
-  const [flash, setFlash] = useState(false);
-
-  // وميض عند تغيّر الرقم المُنادَى
-  useEffect(() => {
-    if (calledTicket && calledTicket.id !== prevCalledRef.current) {
-      prevCalledRef.current = calledTicket.id;
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [calledTicket]);
 
   return (
-    <div className={`dp-clinic-card ${isHighlighted ? 'highlighted' : ''} ${flash ? 'flash' : ''}`}>
+    <div className={`dp-clinic-card ${isHighlighted ? 'highlighted' : ''}`}>
       {/* رأس البطاقة */}
       <div className="dp-card-header">
         <span className="dp-card-prefix">{clinic.prefix}</span>
@@ -73,7 +110,7 @@ const ClinicCard = ({ clinicState, isHighlighted }) => {
       {/* الرقم المُنادَى */}
       <div className="dp-called-section">
         <div className="dp-called-label">تم النداء</div>
-        <div className={`dp-called-number ${flash ? 'dp-flash-anim' : ''}`}>
+        <div className="dp-called-number">
           {calledTicket ? calledTicket.fullNumber : (
             <span className="dp-idle-dash">—</span>
           )}
@@ -108,16 +145,32 @@ const ClinicCard = ({ clinicState, isHighlighted }) => {
 // ——— الصفحة الرئيسية ———
 const DisplayPage = () => {
   const [allClinicsState, setAllClinicsState] = useState([]);
-  const [lastCalled,      setLastCalled]      = useState(null);
   const [tickerText,      setTickerText]      = useState('مركز داريا الطبي يرحب بكم • يرجى الالتزام بالدور • نتمنى لكم الشفاء العاجل');
   const [displayTitle,    setDisplayTitle]    = useState('مركز داريا الطبي');
   const [displaySub,      setDisplaySub]      = useState('Daraya Medical Center');
   const [isFullscreen,    setIsFullscreen]    = useState(false);
   const [highlightedId,   setHighlightedId]   = useState(null);
-  const [soundEnabled, setSoundEnabled] = useState(false);
-  const containerRef = useRef(null);
+  const [callPopup,       setCallPopup]       = useState(null);
+  
+  // ——— إعدادات صفحات العرض ———
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 4;
+  const allClinicsStateRef = useRef(allClinicsState);
 
-  const { announce } = useVoiceAnnouncements(); // تم إزالة rate لأننا نستخدم ملفات جاهزة
+  // حفظ حالة الصوت في localStorage عشان ما يضطر يضغط الزر كل مرة يفتح الصفحة
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => localStorage.getItem('clinic_sound_enabled') === 'true'
+  );
+  // ref يحمل القيمة الحالية — يُقرأ من داخل مستمعات الـ Socket بدون إعادة تسجيلها
+  const soundEnabledRef = useRef(soundEnabled);
+  const containerRef = useRef(null);
+  const callPopupTimerRef = useRef(null);
+  const callHighlightTimerRef = useRef(null);
+  const callQueueRef = useRef([]);
+  const isShowingCallRef = useRef(false);
+  const callRunIdRef = useRef(0);
+
+  const { announce, stop } = useVoiceAnnouncements();
   const { joinDisplay, subscribeTo, isConnected } = useSocket();
 
   // جلب الحالة الكاملة
@@ -126,7 +179,7 @@ const DisplayPage = () => {
       const data = await queueService.getAllDisplay();
       if (data.allClinicsState) setAllClinicsState(data.allClinicsState);
     } catch (err) {
-      console.error('[Display] Fetch error:', err);
+      logger.error('[Display] fetchAll error:', err);
     }
   }, []);
 
@@ -138,41 +191,111 @@ const DisplayPage = () => {
       if (data.tickerText) setTickerText(data.tickerText);
       if (data.clinicTitle) setDisplayTitle(data.clinicTitle);
       if (data.clinicSubtitle) setDisplaySub(data.clinicSubtitle);
-    } catch (_) {}
+    } catch (err) {
+      logger.warn('[Display] fetchSettings error:', err);
+    }
   }, []);
 
-  // ——— التهيئة والاستماع للسوكيتس ———
+  // مزامنة الـ ref مع state الصوت عند كل تغيير
   useEffect(() => {
-    joinDisplay();     // تفعيل السوكيت والانضمام لغرفة العرض
-    fetchAll();        // جلب البيانات الأولية
-    fetchSettings();   // جلب الإعدادات الأولية
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
-    // 1. الاستماع لتحديث حالة جميع العيادات (لتحديث البطاقات وقوائم الانتظار)
+  // مزامنة الـ ref مع حالة العيادات
+  useEffect(() => {
+    allClinicsStateRef.current = allClinicsState;
+  }, [allClinicsState]);
+
+  const showNextCall = useCallback(async () => {
+    if (isShowingCallRef.current) return;
+
+    const payload = callQueueRef.current.shift();
+    if (!payload) return;
+
+    isShowingCallRef.current = true;
+    const runId = ++callRunIdRef.current;
+    setCallPopup(payload);
+    setHighlightedId(payload.clinicId);
+
+    if (callHighlightTimerRef.current) clearTimeout(callHighlightTimerRef.current);
+    callHighlightTimerRef.current = setTimeout(() => {
+      setHighlightedId(null);
+      callHighlightTimerRef.current = null;
+    }, CALL_HIGHLIGHT_DURATION_MS);
+
+    // البحث عن الصفحة التي تحتوي على العيادة المناداة والتبديل إليها تلقائياً
+    const clinicIndex = allClinicsStateRef.current.findIndex(cs => cs.clinic.id === payload.clinicId);
+    if (clinicIndex !== -1) {
+      const targetPage = Math.floor(clinicIndex / itemsPerPage);
+      setCurrentPage(targetPage);
+    }
+
+    if (callPopupTimerRef.current) clearTimeout(callPopupTimerRef.current);
+    await Promise.all([
+      wait(CALL_POPUP_DURATION_MS),
+      payload.audioSequence && soundEnabledRef.current ? announce(payload.audioSequence) : Promise.resolve()
+    ]);
+
+    if (callRunIdRef.current !== runId) return;
+
+    setCallPopup(null);
+    isShowingCallRef.current = false;
+    callPopupTimerRef.current = null;
+    showNextCall();
+  }, [announce]);
+
+  // ——— التهيئة والاستماع للسوكيتس (يُسجَّل مرة واحدة فقط) ———
+  useEffect(() => {
+    joinDisplay();
+    fetchAll();
+    fetchSettings();
+
+    // 1. تحديث حالة جميع العيادات
     const unsubState = subscribeTo('all-clinics-state', (payload) => {
       if (payload) setAllClinicsState(payload);
     });
 
-    // 2. الاستماع لنداء الرقم الجديد (للإعلان الصوتي وشريط آخر نداء والوميض)
+    // 2. نداء الرقم الجديد — نقرأ soundEnabledRef.current لا soundEnabled
+    //    حتى لا نضطر لإعادة تسجيل المستمع في كل مرة يتغير فيها الصوت
     const unsubCall = subscribeTo('current-number', (payload) => {
-      if (payload) {
-        setLastCalled(payload);
-        setHighlightedId(payload.clinicId);
-        
-        // تشغيل تسلسل الملفات الصوتية القادمة من الباك إند
-        if (payload.audioSequence && soundEnabled) {
-          announce(payload.audioSequence);
-        }
-
-        setTimeout(() => setHighlightedId(null), 3000);
+      if (!payload) {
+        callQueueRef.current = [];
+        isShowingCallRef.current = false;
+        callRunIdRef.current++;
+        stop();
+        setCallPopup(null);
+        setHighlightedId(null);
+        if (callPopupTimerRef.current) clearTimeout(callPopupTimerRef.current);
+        if (callHighlightTimerRef.current) clearTimeout(callHighlightTimerRef.current);
+        return;
       }
+      callQueueRef.current.push(payload);
+      showNextCall();
     });
 
-    // تنظيف المستمعات عند إغلاق المكون
     return () => {
       unsubState?.();
       unsubCall?.();
+      if (callPopupTimerRef.current) clearTimeout(callPopupTimerRef.current);
+      if (callHighlightTimerRef.current) clearTimeout(callHighlightTimerRef.current);
+      callRunIdRef.current++;
+      stop();
     };
-  }, [joinDisplay, subscribeTo, fetchAll, fetchSettings, announce, soundEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinDisplay, subscribeTo, fetchAll, fetchSettings, showNextCall, stop]);
+
+  // ——— تأثير التنقل التلقائي بين الصفحات ———
+  const totalPages = Math.ceil(allClinicsState.length / itemsPerPage);
+  useEffect(() => {
+    if (allClinicsState.length <= itemsPerPage) {
+      setCurrentPage(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setCurrentPage((prev) => (prev + 1) % totalPages);
+    }, 8000); // الانتقال كل 8 ثوانٍ
+    return () => clearInterval(interval);
+  }, [allClinicsState.length, totalPages]);
 
   // ملء الشاشة
   const toggleFullscreen = () => {
@@ -187,9 +310,11 @@ const DisplayPage = () => {
 
   const enableSound = () => {
     setSoundEnabled(true);
-    // تشغيل ملف صوتي تجريبي لكسر حماية المتصفح
-    // تأكد من وجود ملف باسم sound_enabled.mp3 في مجلد public/audio/phrases/
-    announce(['/audio/phrases/sound_enabled.mp3']);
+    soundEnabledRef.current = true;
+    localStorage.setItem('clinic_sound_enabled', 'true');
+    // تشغيل ملف موجود فعلاً لكسر حماية الـ Autoplay في المتصفح
+    // نستخدم /audio/numbers/1.wav لأنه مضمون الوجود
+    announce(['/audio/numbers/1.wav']);
   };
 
   useEffect(() => {
@@ -212,6 +337,11 @@ const DisplayPage = () => {
         <Clock />
 
         <div className="dp-header-actions">
+          {totalPages > 1 && (
+            <div className="dp-page-indicator">
+              صفحة {currentPage + 1} من {totalPages}
+            </div>
+          )}
           <div className={`dp-conn-indicator ${isConnected ? 'ok' : 'err'}`}>
             <span className="dp-conn-dot" />
             {isConnected ? 'متصل' : 'غير متصل'}
@@ -222,15 +352,23 @@ const DisplayPage = () => {
         </div>
       </header>
 
-      {/* ——— آخر نداء بارز (شريط عريض) ——— */}
-      {lastCalled && (
-        <div className="dp-last-call-banner">
-          <span className="dp-lc-label">آخر نداء:</span>
-          <span className="dp-lc-number">{lastCalled.fullNumber}</span>
-          <span className="dp-lc-clinic">{lastCalled.clinicName}</span>
-          {lastCalled.patientName && (
-            <span className="dp-lc-patient">— {lastCalled.patientName}</span>
-          )}
+      {/* ——— بوب أب النداء بدل الشريط العلوي ——— */}
+      {callPopup && (
+        <div className="dp-call-popup-wrap" aria-live="assertive">
+          <div className="dp-call-popup">
+            <div className="dp-card-header">
+              <span className="dp-card-prefix">{callPopup.clinic?.prefix || callPopup.fullNumber?.[0]}</span>
+              <span className="dp-card-name">{callPopup.clinicName}</span>
+              <span className="dp-card-status calling">تم النداء</span>
+            </div>
+            <div className="dp-called-section dp-popup-called-section">
+              <div className="dp-called-label">الرقم المنادى</div>
+              <div className="dp-called-number dp-popup-number">{callPopup.fullNumber}</div>
+              {callPopup.patientName && (
+                <div className="dp-called-patient">{callPopup.patientName}</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -242,13 +380,15 @@ const DisplayPage = () => {
             <div className="dp-no-data-sub">جاري تحميل بيانات العيادات...</div>
           </div>
         ) : (
-          allClinicsState.map(cs => (
-            <ClinicCard
-              key={cs.clinic.id}
-              clinicState={cs}
-              isHighlighted={highlightedId === cs.clinic.id}
-            />
-          ))
+          allClinicsState
+            .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
+            .map(cs => (
+              <ClinicCard
+                key={cs.clinic.id}
+                clinicState={cs}
+                isHighlighted={highlightedId === cs.clinic.id}
+              />
+            ))
         )}
       </main>
 

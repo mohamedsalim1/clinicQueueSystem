@@ -1,20 +1,20 @@
 /**
- * SettingsPage.jsx — إعدادات النظام الكاملة
+ * SettingsPage.jsx — إعدادات النظام الكاملة (مع إدارة المستخدمين)
  */
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import queueService from '../services/queueService';
+import userService from '../services/userService'; // ✨ المستورد الجديد
+import apiClient from '../services/apiClient';
+import { getApiBaseURL } from '../config/network';
+import logger from '../utils/logger';
 
-const getBackendUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api$/, '');
-  if (typeof window !== 'undefined' && window.__TAURI__) return 'http://localhost:3000';
-  if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:3000`;
-  return 'http://localhost:3000';
-};
+const API = getApiBaseURL();
 
-const API = `${getBackendUrl()}/api`;
 
 const sortClinics = (items) => {
   return [...items].sort((a, b) => {
@@ -30,6 +30,42 @@ const suggestNextPrefix = (items) => {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   return letters.find(letter => !used.has(letter)) || `C${items.length + 1}`;
 };
+
+// ✨ خريطة الأدوار بالعربي
+const ROLE_MAP = {
+  SUPER_ADMIN: 'مدير النظام',
+  ADMIN: 'مدير',
+  DOCTOR: 'طبيب',
+  RECEPTION: 'استقبال',
+  DISPLAY: 'شاشة عرض'
+};
+
+const Field = ({ label, value, onChange, placeholder, type = 'text', hint, disabled }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>{label}</label>
+    {type === 'textarea' ? (
+      <textarea
+        rows={3}
+        className="form-input"
+        style={{ resize: 'vertical', fontFamily: 'var(--font-main)' }}
+        value={value || ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    ) : (
+      <input
+        type="text"
+        className="form-input"
+        value={value || ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    )}
+    {hint && <p style={{ fontSize: '0.75rem', color: 'var(--clr-text-light)' }}>{hint}</p>}
+  </div>
+);
 
 const SettingsPage = () => {
   const [settings,  setSettings]  = useState({
@@ -47,13 +83,24 @@ const SettingsPage = () => {
   const [isLoading,  setIsLoading]  = useState(true);
   const [isSaving,   setIsSaving]   = useState(false);
   const [isResetting,setIsResetting]= useState(false);
+  const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+  
+  // ✨ حالات إدارة المستخدمين
+  const [users, setUsers] = useState([]);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({ username: '', name: '', password: '', role: 'RECEPTION', isActive: true });
+  const [isSavingUser, setIsSavingUser] = useState(false);
+
   const { addToast } = useToast();
+  const { user: currentUser } = useAuth();
+  const { isConnected } = useSocket();
 
   useEffect(() => {
-    fetch(`${API}/settings`)
-      .then(r => r.json())
-      .then(data => {
-        setSettings(s => ({ ...s, ...data }));
+    apiClient.get('/settings')
+      .then(res => {
+        setSettings(s => ({ ...s, ...res.data }));
         setIsLoading(false);
       })
       .catch(() => {
@@ -68,17 +115,26 @@ const SettingsPage = () => {
         setNewClinic(clinic => ({ ...clinic, prefix: clinic.prefix || suggestNextPrefix(loadedClinics) }));
       })
       .catch(() => addToast('فشل تحميل العيادات', 'error'));
-  }, []);
+
+    // ✨ جلب المستخدمين فقط للمدراء
+    if (['ADMIN', 'SUPER_ADMIN'].includes(currentUser?.role)) {
+      fetchUsers();
+    }
+  }, [currentUser]);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await userService.getUsers();
+      setUsers(data);
+    } catch {
+      addToast('فشل تحميل المستخدمين', 'error');
+    }
+  };
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const res = await fetch(`${API}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
-      if (!res.ok) throw new Error('فشل الحفظ');
+      await apiClient.put('/settings', settings);
       addToast('تم حفظ الإعدادات بنجاح', 'success');
     } catch {
       addToast('فشل حفظ الإعدادات', 'error');
@@ -97,6 +153,48 @@ const SettingsPage = () => {
       addToast('فشل إعادة الضبط', 'error');
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      addToast('جاري تصدير النسخة الاحتياطية...', 'info');
+      const response = await apiClient.get('/settings/backup', { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `darayya_clinic_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addToast('تم تحميل النسخة الاحتياطية لقاعدة البيانات بنجاح', 'success');
+    } catch (error) {
+      addToast('فشل تصدير النسخة الاحتياطية', 'error');
+    }
+  };
+
+    // ✨ تغيير كلمة المرور
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passForm.newPassword !== passForm.confirmPassword) {
+      return addToast('كلمة المرور الجديدة وتأكيدها غير متطابقتين', 'warning');
+    }
+    if (passForm.newPassword.length < 6) {
+      return addToast('كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل', 'warning');
+    }
+
+    try {
+      setIsChangingPass(true);
+      await authService.changePassword({
+        oldPassword: passForm.oldPassword,
+        newPassword: passForm.newPassword
+      });
+      addToast('تم تغيير كلمة المرور بنجاح', 'success');
+      setPassForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      addToast(err.response?.data?.message || 'فشل تغيير كلمة المرور', 'error');
+    } finally {
+      setIsChangingPass(false);
     }
   };
 
@@ -145,73 +243,73 @@ const SettingsPage = () => {
     }
   };
 
-  const handleClinicDelete = async (clinic) => {
-    if (!window.confirm(`هل تريد حذف ${clinic.name}؟\nستختفي العيادة من الاستقبال والطبيب وشاشة العرض، مع بقاء التذاكر القديمة محفوظة.`)) return;
 
+
+  // ✨ دوال إدارة المستخدمين
+  const handleOpenCreateUser = () => {
+    setEditingUser(null);
+    setUserForm({ username: '', name: '', password: '', role: 'RECEPTION', isActive: true, clinicIds: [] });
+    setShowUserModal(true);
+  };
+
+  const handleOpenEditUser = (user) => {
+    setEditingUser(user);
+    // استخراج الـ clinicIds من بيانات الطبيب إذا كانت موجودة
+    const existingClinicIds = user.doctor?.clinics?.map(c => c.clinicId) || [];
+    setUserForm({ 
+      username: user.username, 
+      name: user.name, 
+      password: '', 
+      role: user.role, 
+      isActive: user.isActive,
+      clinicIds: existingClinicIds
+    });
+    setShowUserModal(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser && !userForm.password) return addToast('كلمة المرور مطلوبة للحساب الجديد', 'warning');
+    
     try {
-      setDeletingClinicId(clinic.id);
-      await queueService.deleteClinic(clinic.id);
-      const nextClinics = sortClinics(clinics.filter(item => item.id !== clinic.id));
-      setClinics(nextClinics);
-      setNewClinic(current => ({
-        ...current,
-        prefix: current.prefix || suggestNextPrefix(nextClinics),
-      }));
-      addToast('تم حذف العيادة وتحديث الشاشات', 'success');
+      setIsSavingUser(true);
+      if (editingUser) {
+        await userService.updateUser(editingUser.id, userForm);
+        addToast('تم تحديث الحساب بنجاح', 'success');
+      } else {
+        await userService.createUser(userForm);
+        addToast('تم إنشاء الحساب بنجاح', 'success');
+      }
+      setShowUserModal(false);
+      fetchUsers();
     } catch (err) {
-      addToast(err.message || 'فشل حذف العيادة', 'error');
+      addToast(err.response?.data?.message || 'فشل حفظ الحساب', 'error');
     } finally {
-      setDeletingClinicId(null);
+      setIsSavingUser(false);
     }
   };
 
-  const Field = ({ label, field, placeholder, type = 'text', hint }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>{label}</label>
-      {type === 'textarea' ? (
-        <textarea
-          rows={3}
-          className="form-input"
-          style={{ resize: 'vertical', fontFamily: 'var(--font-main)' }}
-          value={settings[field] || ''}
-          onChange={e => setSettings(s => ({ ...s, [field]: e.target.value }))}
-          placeholder={placeholder}
-          disabled={isLoading}
-        />
-      ) : (
-        <input
-          type="text"
-          className="form-input"
-          value={settings[field] || ''}
-          onChange={e => setSettings(s => ({ ...s, [field]: e.target.value }))}
-          placeholder={placeholder}
-          disabled={isLoading}
-        />
-      )}
-      {hint && <p style={{ fontSize: '0.75rem', color: 'var(--clr-text-light)' }}>{hint}</p>}
-    </div>
-  );
+  const handleToggleUserActive = async (user) => {
+    try {
+      await userService.updateUser(user.id, { isActive: !user.isActive });
+      addToast(`تم ${user.isActive ? 'تعطيل' : 'تفعيل'} الحساب`, 'success');
+      fetchUsers();
+    } catch {
+      addToast('فشل تحديث حالة الحساب', 'error');
+    }
+  };
+
+
 
   return (
     <div className="reception-container" dir="rtl">
-      {/* Sidebar */}
-      <aside className="rec-sidebar">
-        <div className="rec-logo"><span>مركز داريا الطبي</span></div>
-        <nav className="rec-nav">
-          <Link to="/reception" className="rec-nav-item">الاستقبال</Link>
-          <Link to="/doctor"    className="rec-nav-item">الطبيب</Link>
-          <Link to="/display"   className="rec-nav-item" target="_blank">شاشة العرض</Link>
-          <Link to="/tickets"   className="rec-nav-item">كل التذاكر</Link>
-          <Link to="/settings"  className="rec-nav-item active">الإعدادات</Link>
-        </nav>
-      </aside>
 
       {/* Main */}
       <main className="rec-main">
         <header className="rec-header">
           <div>
             <h1 className="rec-page-title">إعدادات النظام</h1>
-            <p className="rec-page-sub">تخصيص مركز داريا الطبي</p>
+            <p className="rec-page-sub">تخصيص مركز داريا الطبي وإدارة الصلاحيات</p>
           </div>
         </header>
 
@@ -219,8 +317,8 @@ const SettingsPage = () => {
           {/* Card: الهوية */}
           <div className="clinic-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 0 }}>هوية المركز</h3>
-            <Field label="اسم المركز (عربي)"    field="clinicTitle"    placeholder="مركز داريا الطبي" />
-            <Field label="اسم المركز (إنجليزي)" field="clinicSubtitle" placeholder="Daraya Medical Center" />
+            <Field label="اسم المركز (عربي)"    value={settings.clinicTitle} onChange={e => setSettings(s => ({ ...s, clinicTitle: e.target.value }))} disabled={isLoading}    placeholder="مركز داريا الطبي" />
+            <Field label="اسم المركز (إنجليزي)" value={settings.clinicSubtitle} onChange={e => setSettings(s => ({ ...s, clinicSubtitle: e.target.value }))} disabled={isLoading} placeholder="Daraya Medical Center" />
           </div>
 
           {/* Card: الطابعة */}
@@ -228,18 +326,23 @@ const SettingsPage = () => {
             <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 0 }}>إعدادات الطابعة</h3>
             <Field
               label="اسم الطابعة الحرارية"
-              field="printerName"
+              value={settings.printerName}
+              onChange={e => setSettings(s => ({ ...s, printerName: e.target.value }))}
+              disabled={isLoading}
               placeholder="Thermal_Printer"
               hint="يجب أن يطابق اسم الطابعة في نظام التشغيل"
             />
           </div>
+
 
           {/* Card: شريط الأخبار */}
           <div className="clinic-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', gridColumn: '1 / -1' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 0 }}>شريط الأخبار (شاشة التلفزيون)</h3>
             <Field
               label="نص الشريط"
-              field="tickerText"
+              value={settings.tickerText}
+              onChange={e => setSettings(s => ({ ...s, tickerText: e.target.value }))}
+              disabled={isLoading}
               type="textarea"
               placeholder="مركز داريا الطبي يرحب بكم • يرجى الالتزام بالدور"
               hint="يظهر أسفل شاشة العرض بشكل متحرك — استخدم • للفصل بين الجمل"
@@ -251,7 +354,9 @@ const SettingsPage = () => {
             <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 0 }}>تذييل التذكرة الحرارية</h3>
             <Field
               label="رسالة التذييل"
-              field="footerMsg"
+              value={settings.footerMsg}
+              onChange={e => setSettings(s => ({ ...s, footerMsg: e.target.value }))}
+              disabled={isLoading}
               placeholder="يرجى انتظار ظهور رقمك على شاشة العرض"
               hint="تظهر في أسفل التذكرة المطبوعة"
             />
@@ -277,6 +382,46 @@ const SettingsPage = () => {
           >
             {isResetting ? 'جاري الإعادة...' : 'إعادة ضبط جميع الطوابير'}
           </button>
+
+          {['ADMIN', 'SUPER_ADMIN'].includes(currentUser?.role) && (
+            <button
+              className="btn"
+              onClick={handleExportBackup}
+              style={{ 
+                minWidth: '200px', 
+                background: '#10b981', 
+                color: '#fff', 
+                border: 'none',
+                borderRadius: 'var(--rad-sm)',
+                cursor: 'pointer',
+                fontWeight: 700
+              }}
+            >
+              💾 تصدير نسخة احتياطية (Backup)
+            </button>
+          )}
+
+          <button
+            className="btn"
+            onClick={() => {
+              if (window.confirm('هل أنت متأكد من إعادة تهيئة اتصالات الشبكة؟\nسيقوم التطبيق بالرجوع لشاشة التهيئة الأولى لإعداد دور الجهاز أو تغيير الـ IP.')) {
+                localStorage.removeItem('app_type');
+                localStorage.removeItem('host_ip');
+                window.location.href = '/';
+              }
+            }}
+            style={{ 
+              minWidth: '220px', 
+              background: '#f1f5f9', 
+              color: '#334155', 
+              border: '1px solid #cbd5e1',
+              borderRadius: 'var(--rad-sm)',
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            🔌 إعادة تهيئة اتصالات الشبكة
+          </button>
         </div>
 
         <div style={{
@@ -288,6 +433,7 @@ const SettingsPage = () => {
           إعادة ضبط الطوابير تحذف جميع التذاكر وتصفّر العدادات. يُنصح بالتنفيذ في بداية كل يوم عمل.
         </div>
 
+        {/* ========== إدارة العيادات ========== */}
         <section className="clinic-card" style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.25rem' }}>إدارة العيادات</h3>
@@ -297,71 +443,12 @@ const SettingsPage = () => {
           </div>
 
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '90px 1fr 1fr 120px 130px',
-                gap: '0.75rem',
-                alignItems: 'end',
-                padding: '1rem',
-                border: '1px solid var(--clr-primary)',
-                borderRadius: 'var(--rad-sm)',
-                background: 'var(--clr-bg-card)'
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>البادئة</label>
-                <input
-                  className="form-input"
-                  value={newClinic.prefix}
-                  onChange={e => setNewClinic(clinic => ({ ...clinic, prefix: e.target.value.toUpperCase() }))}
-                  maxLength={3}
-                  dir="ltr"
-                  placeholder="E"
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>اسم العيادة الجديدة</label>
-                <input
-                  className="form-input"
-                  value={newClinic.name}
-                  onChange={e => setNewClinic(clinic => ({ ...clinic, name: e.target.value }))}
-                  placeholder="عيادة العيون"
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>الاسم الإنجليزي</label>
-                <input
-                  className="form-input"
-                  value={newClinic.nameAr}
-                  onChange={e => setNewClinic(clinic => ({ ...clinic, nameAr: e.target.value }))}
-                  placeholder="Ophthalmology"
-                  dir="ltr"
-                />
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.65rem', fontWeight: 700 }}>
-                <input
-                  type="checkbox"
-                  checked={newClinic.isActive}
-                  onChange={e => setNewClinic(clinic => ({ ...clinic, isActive: e.target.checked }))}
-                />
-                مفعلة
-              </label>
-              <button
-                className="btn btn-primary"
-                onClick={handleAddClinic}
-                disabled={isAddingClinic || !newClinic.name.trim() || !newClinic.prefix.trim()}
-              >
-                {isAddingClinic ? 'إضافة...' : 'إضافة عيادة'}
-              </button>
-            </div>
-
             {clinics.map(clinic => (
               <div
                 key={clinic.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '90px 1fr 1fr 120px 110px 110px',
+                  gridTemplateColumns: '90px 1fr 1fr 120px 110px',
                   gap: '0.75rem',
                   alignItems: 'end',
                   padding: '1rem',
@@ -378,6 +465,7 @@ const SettingsPage = () => {
                     onChange={e => handleClinicChange(clinic.id, 'prefix', e.target.value.toUpperCase())}
                     maxLength={3}
                     dir="ltr"
+                    disabled={true}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -386,6 +474,7 @@ const SettingsPage = () => {
                     className="form-input"
                     value={clinic.name || ''}
                     onChange={e => handleClinicChange(clinic.id, 'name', e.target.value)}
+                    disabled={true}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -395,6 +484,7 @@ const SettingsPage = () => {
                     value={clinic.nameAr || ''}
                     onChange={e => handleClinicChange(clinic.id, 'nameAr', e.target.value)}
                     dir="ltr"
+                    disabled={true}
                   />
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.65rem', fontWeight: 700 }}>
@@ -412,18 +502,210 @@ const SettingsPage = () => {
                 >
                   {savingClinicId === clinic.id ? 'حفظ...' : 'حفظ'}
                 </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => handleClinicDelete(clinic)}
-                  disabled={deletingClinicId === clinic.id || savingClinicId === clinic.id}
-                >
-                  {deletingClinicId === clinic.id ? 'حذف...' : 'حذف'}
-                </button>
+
               </div>
             ))}
           </div>
         </section>
+
+        {/* ========== ✨ إدارة المستخدمين (للمدراء فقط) ========== */}
+        {['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role) && (
+          <section className="clinic-card" style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.25rem' }}>إدارة المستخدمين والصلاحيات</h3>
+                <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                  إنشاء حسابات للأطباء والاستقبال وتحديد صلاحياتهم.
+                </p>
+              </div>
+              <button className="btn btn-primary" onClick={handleOpenCreateUser}>
+                + إنشاء حساب جديد
+              </button>
+            </div>
+
+          <table className="qt-table" style={{ marginTop: '1rem' }}>
+            <thead>
+              <tr>
+                <th>الاسم الكامل</th>
+                <th>اسم المستخدم</th>
+                <th>الدور</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} style={{ opacity: u.isActive ? 1 : 0.5 }}>
+                  <td style={{ fontWeight: 700 }}>{u.name}</td>
+                  <td dir="ltr" style={{ textAlign: 'right' }}>{u.username}</td>
+                  <td>
+                    <span style={{
+                      padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
+                      background: u.role === 'DOCTOR' ? '#dbeafe' : u.role === 'RECEPTION' ? '#fef3c7' : '#ede9fe',
+                      color: u.role === 'DOCTOR' ? '#1e40af' : u.role === 'RECEPTION' ? '#92400e' : '#5b21b6',
+                    }}>
+                      {ROLE_MAP[u.role]}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
+                      background: u.isActive ? '#d1fae5' : '#fee2e2',
+                      color: u.isActive ? '#065f46' : '#991b1b',
+                    }}>
+                      {u.isActive ? 'مفعّل' : 'معطّل'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {/* إخفاء زر التعديل للسوبر أدمن */}
+                      {u.role !== 'SUPER_ADMIN' && (
+                        <button className="btn" style={{fontSize: '0.8rem', padding: '0.3rem 0.8rem'}} onClick={() => handleOpenEditUser(u)}>تعديل</button>
+                      )}
+                      {/* إخفاء زر التعطيل للسوبر أدمن أو للحساب الحالي */}
+                      {u.role !== 'SUPER_ADMIN' && u.id !== currentUser.id && (
+                        <button 
+                          className={`btn ${u.isActive ? 'btn-danger' : 'btn-primary'}`}
+                          style={{fontSize: '0.8rem', padding: '0.3rem 0.8rem'}}
+                          onClick={() => handleToggleUserActive(u)}
+                        >
+                          {u.isActive ? 'تعطيل' : 'تفعيل'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+        </section>
+        )}
       </main>
+
+        {/* ✨ نافذة إنشاء/تعديل المستخدم (Modal) - بتصميم شبكي احترافي */}
+      {showUserModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }} onClick={() => setShowUserModal(false)}>
+          
+          <div style={{
+            background: 'var(--clr-bg-card)', 
+            borderRadius: 'var(--rad-md)',
+            width: '100%', maxWidth: '550px', // وسعنا النافذة قليلاً لاستيعاب العمودين
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* رأس النافذة */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--clr-border)', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                {editingUser ? 'تعديل حساب' : 'إنشاء حساب جديد'}
+              </h3>
+            </div>
+
+            {/* منطقة المحتوى (قابلة للتمرير) */}
+            <form onSubmit={handleSaveUser} style={{ 
+              display: 'flex', flexDirection: 'column', gap: '1rem', 
+              overflowY: 'auto',
+              padding: '1.25rem 1.5rem', 
+              flex: 1, minHeight: 0
+            }}>
+              
+              {/* صف مزدوج: الاسم واسم المستخدم */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>الاسم الكامل</label>
+                  <input className="form-input" type="text" value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} required />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>اسم المستخدم</label>
+                  <input className="form-input" type="text" value={userForm.username} onChange={(e) => setUserForm({...userForm, username: e.target.value})} required disabled={!!editingUser} />
+                </div>
+              </div>
+
+              {/* صف مزدوج: كلمة المرور والدور */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>
+                    {editingUser ? 'كلمة المرور الجديدة' : 'كلمة المرور'}
+                  </label>
+                  <input className="form-input" type="password" placeholder={editingUser ? 'اتركها فارغة للثبات' : ''} value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} required={!editingUser} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-text-muted)' }}>الدور / الصلاحية</label>
+                  <select className="form-input" value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value, clinicIds: []})}>
+                    <option value="RECEPTION">استقبال</option>
+                    <option value="DOCTOR">طبيب</option>
+                    <option value="ADMIN">مدير</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* اختيار العيادات بتصميم شبكي (عمودين) */}
+              {userForm.role === 'DOCTOR' && (
+                <div style={{ 
+                  background: 'var(--clr-bg-page)', 
+                  padding: '1rem', 
+                  borderRadius: '8px',
+                  border: '1px solid var(--clr-border)'
+                }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-text-muted)', display: 'block', marginBottom: '0.75rem' }}>
+                    العيادات المسموح للطبيب دخولها:
+                  </label>
+                  
+                  {/* ✨ السر هنا: شبكة من عمودين لتوفير 50% من المساحة العمودية */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr', 
+                    gap: '0.4rem 1rem', // مسافة أفقية بين العمودين
+                    maxHeight: '160px', // ارتفاع مناسب جداً يكفي لـ 5 صفوف
+                    overflowY: 'auto' 
+                  }}>
+                    {clinics.map(clinic => (
+                      <label key={clinic.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.2rem 0' }}>
+                        <input
+                          type="checkbox"
+                          checked={userForm.clinicIds?.includes(clinic.id) || false}
+                          onChange={(e) => {
+                            const currentIds = userForm.clinicIds || [];
+                            const newIds = e.target.checked 
+                              ? [...currentIds, clinic.id]
+                              : currentIds.filter(id => id !== clinic.id);
+                            setUserForm({...userForm, clinicIds: newIds});
+                          }}
+                          style={{accentColor: 'var(--clr-primary)'}}
+                        />
+                        <span style={{ fontSize: '0.85rem' }}>{clinic.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+                            
+            </form>
+
+            {/* أزرار التحكم (ثابتة في الأسفل) */}
+            <div style={{ 
+              display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', 
+              padding: '1rem 1.5rem', 
+              borderTop: '1px solid var(--clr-border)', 
+              flexShrink: 0, 
+              background: 'var(--clr-bg-card)',
+              borderBottomLeftRadius: 'var(--rad-md)', borderBottomRightRadius: 'var(--rad-md)'
+            }}>
+              <button type="button" className="btn" onClick={() => setShowUserModal(false)}>إلغاء</button>
+              <button type="submit" className="btn btn-primary" onClick={handleSaveUser} disabled={isSavingUser}>
+                {isSavingUser ? 'جاري الحفظ...' : 'حفظ'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };

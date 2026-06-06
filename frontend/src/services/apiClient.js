@@ -1,58 +1,43 @@
 import axios from 'axios';
+import { getApiBaseURL } from '../config/network';
 
-// Helper to determine backend URL
-const getBackendUrl = () => {
-  // If explicitly set
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api$/, '');
-  
-  // If running in Tauri desktop app, backend is locally hosted
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    return 'http://localhost:3000';
-  }
-  
-  // Web Host Mode (LAN access)
-  if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:3000`;
-  }
-  
-  return 'http://localhost:3000';
-};
-
-const API_BASE_URL = `${getBackendUrl()}/api`;
-
+// تحديد الـ Base URL بشكل ديناميكي
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
+  baseURL: getApiBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-//   Interceptor لإرفاق الـ Token بكل طلب
+// ✨ Request Interceptor: إرفاق الـ Token بكل طلب قبل إرساله
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('clinic_token');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
-//   Interceptor لطرد المستخدم إذا كان الـ Token غير صالح (401)
+// ✨ Response Interceptor: اعتراض أخطاء 401 عالمياً
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('clinic_token');
-      localStorage.removeItem('clinic_user');
-      // إعادة التوجيه لصفحة تسجيل الدخول إذا لم يكن فيها بالفعل
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+    if (error.response && error.response.status === 401) {
+      // تجنب الحلقة اللانهائية: لا تقم بتسجيل الخروج إذا كان الطلب نفسه هو لتسجيل الدخول
+      if (error.config.url !== '/auth/login' && error.config.url !== '/auth/me') {
+        // مسح البيانات وإعادة التوجيه لتسجيل الدخول
+        localStorage.removeItem('token');
+        // استخدام window.location لتجاوز React Router إذا لزم الأمر
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
-    console.error('[API Error]:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
