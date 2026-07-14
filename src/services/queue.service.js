@@ -6,8 +6,7 @@
  * - يدعم حالة العرض (displayState)
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 const buildFullNumber = (prefix, number) => `${prefix}-${String(number).padStart(3, '0')}`;
 
@@ -19,9 +18,7 @@ const enrichTicket = (ticket) => {
     fullNumber: ticket.fullNumber || buildFullNumber(prefix, ticket.number),
     clinicName: ticket.clinic?.name || 'العيادة',
     clinicNameAr: ticket.clinic?.nameAr || '',
-    // استخراج اسم المريض من العلاقة الجديدة ليتوافق مع الفرونت إند
     patientName: ticket.patient?.fullName || '',
-    // ✨ تعديل: استخراج رقم الهاتف (من المريض أولاً، وإلا من العائلة)
     patientPhone: ticket.patient?.phoneOptional || ticket.patient?.family?.primaryPhone || '—',
   };
 };
@@ -39,7 +36,7 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
   if (!audioKey) {
     const p = String(prefix).trim().toUpperCase();
     if (p === 'A') return 'generalInternalClinic';
-    if (p === 'B') return 'babyAndFeedClinic';
+    if (p === 'B') return 'babyClinic';
     if (p === 'C') return 'vaccinationClinic';
     if (p === 'D') return 'chronicDiseasesClinic';
     if (p === 'E') return 'orthopedicClinic';
@@ -48,8 +45,10 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
     if (p === 'H') return 'laboratory';
     if (p === 'I') return 'damadClinic';
     if (p === 'J') return 'dentalClinic';
+    if (p === 'K') return 'generalSurgeryClinic';
+    if (p === 'L') return 'feedClinic';
     return 'generalInternalClinic';
-  }
+ }
 
   const key = String(audioKey).trim().toLowerCase();
   
@@ -59,9 +58,9 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
     'general': 'generalInternalClinic',
     'a': 'generalInternalClinic',
 
-    'babyandfeedclinic': 'babyAndFeedClinic',
-    'pediatrics': 'babyAndFeedClinic',
-    'b': 'babyAndFeedClinic',
+    'babyclinic': 'babyClinic',
+    'pediatrics': 'babyClinic',
+    'b': 'babyClinic',
 
     'vaccinationclinic': 'vaccinationClinic',
     'vaccination': 'vaccinationClinic',
@@ -93,7 +92,15 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
 
     'dentalclinic': 'dentalClinic',
     'dental': 'dentalClinic',
-    'j': 'dentalClinic'
+    'j': 'dentalClinic',
+
+    'generalsurgeryclinic': 'generalSurgeryClinic',
+    'surgery': 'generalSurgeryClinic',
+    'k': 'generalSurgeryClinic',
+
+    'feedclinic': 'feedClinic',
+    'nutrition': 'feedClinic',
+    'l': 'feedClinic'
   };
 
   return map[key] || audioKey;
@@ -107,7 +114,6 @@ const getQueueByClinic = async (clinicId) => {
   const tickets = await prisma.queueTicket.findMany({
     where: { clinicId, status: 'WAITING' },
     orderBy: { number: 'asc' },
-    // ✨ تعديل: جلب العائلة مع المريض لمعرفة رقم الهاتف
     include: { clinic: true, patient: { include: { family: true } } },
   });
   return tickets.map(enrichTicket);
@@ -117,7 +123,6 @@ const getCalledPatient = async (clinicId) => {
   const query = {
     where: { status: 'CALLED' },
     orderBy: { calledAt: 'desc' },
-    // ✨ تعديل: جلب العائلة مع المريض
     include: { clinic: true, patient: { include: { family: true } } },
   };
   if (clinicId && clinicId !== 'all') query.where.clinicId = clinicId;
@@ -135,21 +140,18 @@ const getAllClinicsState = async () => {
 
   const clinicIds = clinics.map((c) => c.id);
 
-  // استعلام واحد لكل التذاكر المُستدعاة (CALLED) لجميع العيادات
   const allCalledRaw = await prisma.queueTicket.findMany({
     where: { clinicId: { in: clinicIds }, status: 'CALLED' },
     orderBy: { calledAt: 'desc' },
     include: { clinic: true, patient: { include: { family: true } } }
   });
 
-  // استعلام واحد لأول 5 تذاكر انتظار لكل عيادة
   const allWaitingRaw = await prisma.queueTicket.findMany({
     where: { clinicId: { in: clinicIds }, status: 'WAITING' },
     orderBy: { number: 'asc' },
     include: { clinic: true, patient: { include: { family: true } } }
   });
 
-  // استعلام واحد للأعداد الإجمالية للانتظار (count per clinic)
   const waitingCounts = await prisma.queueTicket.groupBy({
     by: ['clinicId'],
     where: { clinicId: { in: clinicIds }, status: 'WAITING' },
@@ -159,10 +161,9 @@ const getAllClinicsState = async () => {
     waitingCounts.map((r) => [r.clinicId, r._count.id])
   );
 
-  // تجميع النتائج في الذاكرة بدون استعلامات إضافية
   const calledMap = {};
   for (const t of allCalledRaw) {
-    if (!calledMap[t.clinicId]) calledMap[t.clinicId] = t; // أحدث واحد (مرتّب desc)
+    if (!calledMap[t.clinicId]) calledMap[t.clinicId] = t;
   }
 
   const waitingMap = {};
@@ -178,7 +179,6 @@ const getAllClinicsState = async () => {
     waitingCount: waitingCountMap[clinic.id] || 0,
   }));
 };
-
 
 const getClinics = async () => {
   const clinics = await prisma.clinic.findMany({
@@ -224,7 +224,6 @@ const getCallHistory = async (limit = 15) => {
     where: { status: { in: ['CALLED', 'IN_PROGRESS', 'COMPLETED'] } },
     orderBy: { calledAt: 'desc' },
     take: limit,
-    // ✨ تعديل: جلب العائلة مع المريض
     include: { clinic: true, patient: { include: { family: true } } },
   });
   return tickets.map(enrichTicket);
@@ -269,7 +268,6 @@ const addToQueue = async ({ clinicId, patientId = null }) => {
 
     const ticket = await tx.queueTicket.create({
       data: ticketData,
-      // ✨ تعديل: جلب العائلة مع المريض
       include: { clinic: true, patient: { include: { family: true } } },
     });
 
@@ -293,7 +291,6 @@ const nextPatient = async (clinicId, doctorId = null) => {
     const nextTicket = await tx.queueTicket.findFirst({
       where: { clinicId, status: 'WAITING' },
       orderBy: { number: 'asc' },
-      // ✨ تعديل: جلب العائلة مع المريض
       include: { clinic: true, patient: { include: { family: true } } },
     });
 
@@ -307,7 +304,6 @@ const nextPatient = async (clinicId, doctorId = null) => {
         calledAt: new Date(),
         ...(doctorId ? { doctorId } : {})
       },
-      // ✨ تعديل: جلب العائلة مع المريض
       include: { clinic: true, patient: { include: { family: true } } },
     });
 
@@ -320,7 +316,6 @@ const recallCurrentPatient = async (clinicId) => {
   const current = await prisma.queueTicket.findFirst({
     where: { clinicId, status: 'CALLED' },
     orderBy: { calledAt: 'desc' },
-    // ✨ تعديل: جلب العائلة مع المريض
     include: { clinic: true, patient: { include: { family: true } } },
   });
 
@@ -332,7 +327,6 @@ const recallCurrentPatient = async (clinicId) => {
       calledAt: new Date(),
       displayState: 'REPEAT'
     },
-    // ✨ تعديل: جلب العائلة مع المريض
     include: { clinic: true, patient: { include: { family: true } } },
   });
 
@@ -351,7 +345,6 @@ const skipPatient = async (clinicId, doctorId = null) => {
       const updatedCurrent = await tx.queueTicket.update({
         where: { id: current.id },
         data: { status: 'SKIPPED', displayState: 'ARCHIVED' },
-        // ✨ تعديل: جلب العائلة مع المريض
         include: { clinic: true, patient: { include: { family: true } } },
       });
       skipped = enrichTicket(updatedCurrent);
@@ -372,7 +365,6 @@ const skipPatient = async (clinicId, doctorId = null) => {
           calledAt: new Date(),
           ...(doctorId ? { doctorId } : {})
         },
-        // ✨ تعديل: جلب العائلة مع المريض
         include: { clinic: true, patient: { include: { family: true } } },
       });
       called = enrichTicket(updatedNext);
@@ -400,7 +392,6 @@ const completePatient = async (clinicId, doctorId = null) => {
         completedAt: new Date(),
         ...(doctorId && !current.doctorId ? { doctorId } : {})
       },
-      // ✨ تعديل: جلب العائلة مع المريض
       include: { clinic: true, patient: { include: { family: true } } },
     });
 
@@ -409,10 +400,25 @@ const completePatient = async (clinicId, doctorId = null) => {
   return result;
 };
 
+// ✨✨✨ التعديل المطلوب: تصفير العداد بدون حذف التذاكر من الداتابيز ✨✨✨
 const resetAllQueues = async () => {
   await prisma.$transaction(async (tx) => {
-    await tx.queueTicket.deleteMany({});
-    await tx.clinic.updateMany({ data: { currentNumber: 0 } });
+    // 1. إنهاء تذاكر الانتظار (تحويلها لتخطي لأنها لم تُعالج)
+    await tx.queueTicket.updateMany({
+      where: { status: 'WAITING' },
+      data: { status: 'SKIPPED', displayState: 'ARCHIVED' }
+    });
+
+    // 2. إنهاء التذاكر قيد الاستدعاء أو المعاينة (تحويلها لمكتملة لإغلاق الحلقة)
+    await tx.queueTicket.updateMany({
+      where: { status: { in: ['CALLED', 'IN_PROGRESS'] } },
+      data: { status: 'COMPLETED', displayState: 'ARCHIVED', completedAt: new Date() }
+    });
+
+    // 3. تصفير العداد التصاعدي لجميع العيادات فقط
+    await tx.clinic.updateMany({
+      data: { currentNumber: 0 }
+    });
   });
 };
 

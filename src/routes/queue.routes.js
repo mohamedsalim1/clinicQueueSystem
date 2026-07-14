@@ -54,7 +54,7 @@ router.post('/recall', authorize(['RECEPTION', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN']
 router.post('/complete', authorize(['DOCTOR', 'ADMIN', 'SUPER_ADMIN']), clinicIdBodyValidator, queueController.completeQueue);
 
 // إعادة ضبط الطوابير: الأدمن فقط (عملية خطيرة)
-router.post('/reset', authorize(['ADMIN', 'SUPER_ADMIN']), queueController.resetQueue);
+router.post('/reset', authorize(['ADMIN', 'SUPER_ADMIN', 'RECEPTION']), queueController.resetQueue);
 
 // ——— GET (جلب البيانات) ———
 

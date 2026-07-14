@@ -1,5 +1,5 @@
 /**
- * settings.controller.js — معالج طلبات الإعدادات
+ * settings.controller.js — معالج طلبات الإعدادات والنسخ الاحتياطي
  */
 
 const settingsService = require('../services/settings.service');
@@ -124,4 +124,28 @@ const exportBackup = async (req, res, next) => {
   }
 };
 
-module.exports = { getSettings, updateSettings, getClinics, createClinic, updateClinic, deleteClinic, exportBackup };
+const restoreBackup = async (req, res, next) => {
+  try {
+    await settingsService.restoreBackup(req.body);
+    await auditService.logAction({
+      userId: req.user?.id,
+      actionType: 'RESTORE',
+      entity: 'Database',
+      newValue: { message: 'تم استعادة النسخة الاحتياطية لقاعدة البيانات بالكامل' }
+    });
+    return res.status(200).json({ success: true, message: 'تم استعادة النسخة الاحتياطية بنجاح' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getSettings,
+  updateSettings,
+  getClinics,
+  createClinic,
+  updateClinic,
+  deleteClinic,
+  exportBackup,
+  restoreBackup
+};

@@ -17,6 +17,7 @@ const MainLayout = () => {
 
   // دالة لتحديد الرابط النشط
   const isActive = (path) => location.pathname === path ? 'rec-nav-item active' : 'rec-nav-item';
+  const isActiveWithClass = (path, extraClass) => `${isActive(path)} ${extraClass}`.trim();
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -48,6 +49,10 @@ const MainLayout = () => {
           {/* الطبيب: يظهر للطبيب والمدراء */}
           {['DOCTOR', 'ADMIN', 'SUPER_ADMIN'].includes(user?.role) && (
             <Link to="/doctor" className={isActive('/doctor')}>الطبيب</Link>
+          )}
+
+          {['DOCTOR', 'ADMIN', 'SUPER_ADMIN'].includes(user?.role) && (
+            <Link to="/doctor-pwa" className={isActiveWithClass('/doctor-pwa', 'doctor-mobile-entry')}>واجهة الطبيب للموبايل</Link>
           )}
 
           {/* شاشة العرض: للجميع */}

@@ -16,7 +16,7 @@ async function main() {
   // audioKey يجب أن يطابق اسم الملف في public/audio/clinics/ بدون الامتداد .wav
   const clinicsData = [
     { id: '1',  name: 'عيادة الداخلية العامة',  nameAr: 'Internal Medicine',    prefix: 'A', audioKey: 'generalInternalClinic' },
-    { id: '2',  name: 'عيادة الأطفال والتغذية', nameAr: 'Pediatrics & Nutrition', prefix: 'B', audioKey: 'babyAndFeedClinic'     },
+    { id: '2',  name: 'عيادة الأطفال', nameAr: 'Pediatrics', prefix: 'B', audioKey: 'babyClinic'     },
     { id: '3',  name: 'عيادة اللقاح',           nameAr: 'Vaccination',            prefix: 'C', audioKey: 'vaccinationClinic'    },
     { id: '4',  name: 'عيادة الأمراض المزمنة', nameAr: 'Chronic Diseases',       prefix: 'D', audioKey: 'chronicDiseasesClinic' },
     { id: '5',  name: 'عيادة العظمية',          nameAr: 'Orthopedics',            prefix: 'E', audioKey: 'orthopedicClinic'     },
@@ -26,6 +26,7 @@ async function main() {
     { id: '9',  name: 'عيادة الضماد',           nameAr: 'Dressing',               prefix: 'I', audioKey: 'damadClinic'          },
     { id: '10', name: 'عيادة الأسنان',          nameAr: 'Dental',                 prefix: 'J', audioKey: 'dentalClinic'         },
     { id: '11', name: 'عيادة الجراحة العامة',   nameAr: 'General Surgery',        prefix: 'K', audioKey: 'generalSurgeryClinic' },
+    { id: '12', name: 'عيادة التغذية',          nameAr: 'Nutrition',              prefix: 'L', audioKey: 'feedClinic' },
   ];
 
   for (const clinic of clinicsData) {
@@ -38,7 +39,7 @@ async function main() {
       create: { ...clinic, currentNumber: 0, isActive: true },
     });
   }
-  console.log('✅ 11 عيادة افتراضية: جاهزة');
+  console.log('✅ 12 عيادة افتراضية: جاهزة');
 
   // ——— 2. إنشاء حساب SUPER_ADMIN ———
   const superAdminHash = await bcrypt.hash('SuperAdmin@2026', 10);

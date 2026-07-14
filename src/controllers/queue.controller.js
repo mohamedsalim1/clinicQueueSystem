@@ -2,8 +2,7 @@ const queueService = require('../services/queue.service');
 const auditService = require('../services/audit.service');
 const { getIO } = require('../sockets');
 const logger = require('../utils/logger');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 const RECALL_SUPPRESS_MS = 7000;
 const recallLocks = new Map();
@@ -97,9 +96,9 @@ const resolveClinicAudioFile = (audioKey) => {
     'general': 'generalInternalClinic',
     'a': 'generalInternalClinic',
 
-    'babyandfeedclinic': 'babyAndFeedClinic',
-    'pediatrics': 'babyAndFeedClinic',
-    'b': 'babyAndFeedClinic',
+    'babyclinic': 'babyClinic',
+    'pediatrics': 'babyClinic',
+    'b': 'babyClinic',
 
     'vaccinationclinic': 'vaccinationClinic',
     'vaccination': 'vaccinationClinic',
@@ -131,7 +130,15 @@ const resolveClinicAudioFile = (audioKey) => {
 
     'dentalclinic': 'dentalClinic',
     'dental': 'dentalClinic',
-    'j': 'dentalClinic'
+    'j': 'dentalClinic',
+
+    'generalsurgeryclinic': 'generalSurgeryClinic',
+    'surgery': 'generalSurgeryClinic',
+    'k': 'generalSurgeryClinic',
+
+    'feedclinic': 'feedClinic',
+    'nutrition': 'feedClinic',
+    'l': 'feedClinic'
   };
 
   return map[key] || audioKey;
@@ -376,7 +383,96 @@ const getAllDisplay = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const deviceControl = async (req, res, next) => {
+  try {
+    const clinicId = String(req.headers.id || req.query.id || '').trim();
+    const cmd = String(req.headers.cmd || req.query.cmd || '').trim().toLowerCase();
+
+    if (!clinicId) {
+      res.setHeader('Content-Type', 'text/plain');
+      return res.status(400).send('000');
+    }
+
+    if (cmd !== 'call' && cmd !== 'recall') {
+      res.setHeader('Content-Type', 'text/plain');
+      return res.status(400).send('000');
+    }
+
+    // Check if clinic exists
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId }
+    });
+    if (!clinic) {
+      res.setHeader('Content-Type', 'text/plain');
+      return res.status(404).send('000');
+    }
+
+    if (cmd === 'call') {
+      // check if there is a next waiting ticket
+      const nextTicket = await prisma.queueTicket.findFirst({
+        where: { clinicId, status: 'WAITING' }
+      });
+
+      if (nextTicket) {
+        // call the next patient
+        const calledTicket = await queueService.nextPatient(clinicId, null);
+        if (calledTicket) {
+          const io = getIO();
+          const payload = buildAnnouncePayload(calledTicket);
+
+          io.to(`clinic-${clinicId}`).emit('current-number', payload);
+          io.to('display-global').emit('current-number', payload);
+
+          await auditService.logAction({
+            userId: null,
+            actionType: 'CALL',
+            entity: 'QueueTicket',
+            entityId: calledTicket.id,
+            newValue: { action: 'DEVICE_CALL', fullNumber: calledTicket.fullNumber, clinicId }
+          });
+
+          await broadcastClinicUpdate(io, clinicId);
+        }
+      }
+    } else if (cmd === 'recall') {
+      const calledTicket = await queueService.getCalledPatient(clinicId);
+      if (calledTicket) {
+        const recallKey = makeRecallLockKey(clinicId, calledTicket.id);
+        if (!isRecallLocked(recallKey)) {
+          lockRecall(recallKey);
+          const currentTicket = await queueService.recallCurrentPatient(clinicId);
+          if (currentTicket) {
+            const io = getIO();
+            const payload = buildAnnouncePayload(currentTicket);
+
+            io.to(`clinic-${clinicId}`).emit('current-number', payload);
+            io.to('display-global').emit('current-number', payload);
+
+            await auditService.logAction({
+              userId: null,
+              actionType: 'CALL',
+              entity: 'QueueTicket',
+              entityId: currentTicket.id,
+              newValue: { action: 'DEVICE_RECALL', fullNumber: currentTicket.fullNumber, clinicId }
+            });
+          }
+        }
+      }
+    }
+
+    // Return the current patient number padded to 3 digits (or 000 if none)
+    const currentCalled = await queueService.getCalledPatient(clinicId);
+    const resultNum = currentCalled ? String(currentCalled.number).padStart(3, '0') : '000';
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(resultNum);
+  } catch (error) {
+    logger.error('Error in deviceControl:', error);
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(500).send('000');
+  }
+};
+
 module.exports = {
   takeQueue, callNext, skipQueue, recallQueue, completeQueue, resetQueue,
-  getQueue, getCurrentDisplay, getAllDisplay
+  getQueue, getCurrentDisplay, getAllDisplay, deviceControl
 };

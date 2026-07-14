@@ -49,8 +49,8 @@ const PatientsAdminPage = () => {
   const [selectedFamily, setSelectedFamily] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [familyForm, setFamilyForm] = useState({ primaryName: '', primaryPhone: '', address: '' });
-  const [patientForm, setPatientForm] = useState({ fullName: '', fileNumber: '', relation: 'SELF', gender: 'MALE', birthDate: '' });
-  const [addMemberForm, setAddMemberForm] = useState({ patientName: '', relation: 'SON', gender: 'MALE', birthDate: '' });
+  const [patientForm, setPatientForm] = useState({ fullName: '', fileNumber: '', relation: 'SELF', gender: 'MALE', birthDate: '', nationalId: '' });
+  const [addMemberForm, setAddMemberForm] = useState({ patientName: '', relation: 'SON', gender: 'MALE', birthDate: '', nationalId: '' });
   const [modal, setModal] = useState(null);
   const [medicalRecordData, setMedicalRecordData] = useState(null);
   const [isLoadingRecord, setIsLoadingRecord] = useState(false);
@@ -130,7 +130,8 @@ const PatientsAdminPage = () => {
       fileNumber: patient.fileNumber || '',
       relation: patient.relation || 'OTHER',
       gender: patient.gender || 'MALE',
-      birthDate: patient.birthDate ? patient.birthDate.split('T')[0] : ''
+      birthDate: patient.birthDate ? patient.birthDate.split('T')[0] : '',
+      nationalId: patient.nationalId || ''
     });
     setModal('editPatient');
   };
@@ -160,7 +161,7 @@ const PatientsAdminPage = () => {
 
   const openAddMember = (family) => {
     setSelectedFamily(family);
-    setAddMemberForm({ patientName: '', relation: 'SON', gender: 'MALE', birthDate: '' });
+    setAddMemberForm({ patientName: '', relation: 'SON', gender: 'MALE', birthDate: '', nationalId: '' });
     setModal('addMember');
   };
 
@@ -262,6 +263,7 @@ const PatientsAdminPage = () => {
                       <div className="patient-facts">
                         <div>اسم الملف: <strong>{family.primaryName}</strong></div>
                         <div>رقم المرجع: <strong>{patient.fileNumber}</strong></div>
+                        <div>الرقم الوطني: <strong>{patient.nationalId || 'غير مدخل'}</strong></div>
                         <div>الجنس: <strong>{genderLabel(patient.gender)}</strong></div>
                         <div>الميلاد: <strong>{formatDate(patient.birthDate)}</strong></div>
                       </div>
@@ -355,6 +357,10 @@ const PatientsAdminPage = () => {
                 <label className="admin-label">تاريخ الميلاد</label>
                 <input className="admin-input" type="date" dir="ltr" value={patientForm.birthDate} onChange={(event) => setPatientForm((prev) => ({ ...prev, birthDate: event.target.value }))} />
               </div>
+              <div className="admin-field">
+                <label className="admin-label">الرقم الوطني</label>
+                <input className="admin-input" value={patientForm.nationalId} onChange={(event) => setPatientForm((prev) => ({ ...prev, nationalId: event.target.value }))} placeholder="اختياري" />
+              </div>
             </div>
             <button className="admin-btn primary" type="submit">حفظ</button>
           </form>
@@ -393,6 +399,10 @@ const PatientsAdminPage = () => {
               <div className="admin-field">
                 <label className="admin-label">تاريخ الميلاد</label>
                 <input className="admin-input" type="date" dir="ltr" value={addMemberForm.birthDate} onChange={(event) => setAddMemberForm((prev) => ({ ...prev, birthDate: event.target.value }))} />
+              </div>
+              <div className="admin-field">
+                <label className="admin-label">الرقم الوطني</label>
+                <input className="admin-input" value={addMemberForm.nationalId} onChange={(event) => setAddMemberForm((prev) => ({ ...prev, nationalId: event.target.value }))} placeholder="اختياري" />
               </div>
             </div>
             <button className="admin-btn primary" type="submit">إضافة</button>

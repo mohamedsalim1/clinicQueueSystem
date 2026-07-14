@@ -160,6 +160,7 @@ model Patient {
   gender        Gender?       
   birthDate     DateTime?     
   phoneOptional String?
+  nationalId    String?
   lastVisitAt   DateTime?     
   deletedAt     DateTime?     
   
@@ -215,7 +216,7 @@ model Visit {
 model QueueTicket {
   id           String       @id @default(cuid())
   number       Int
-  fullNumber   String       @unique //   تم إضافته لمنع التكرار العالمي
+  fullNumber   String        //   تم إضافته لمنع التكرار العالمي
   status       QueueStatus  @default(WAITING)
   displayState DisplayState @default(IDLE) //   تم تعديل الافتراضي إلى IDLE
   calledAt     DateTime?
@@ -235,7 +236,6 @@ model QueueTicket {
   visit        Visit?
   announcements AnnouncementHistory[] //   علاقة لسجل النداءات
 
-  @@unique([clinicId, number]) 
   @@index([clinicId, status])
 }
 

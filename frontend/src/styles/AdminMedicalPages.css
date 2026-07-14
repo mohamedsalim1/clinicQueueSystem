@@ -217,6 +217,35 @@
 
 .admin-table tr:hover td { background: #fbfdff; }
 
+.admin-table-dense th,
+.admin-table-dense td {
+  padding: 0.62rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.patient-visits-report-table {
+  min-width: 1320px;
+}
+
+.patient-visits-report-table th,
+.patient-visits-report-table td {
+  white-space: nowrap;
+}
+
+.patient-visits-report-table .admin-table-address {
+  min-width: 180px;
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.admin-muted {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .admin-badge {
   display: inline-flex;
   align-items: center;

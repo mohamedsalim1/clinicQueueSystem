@@ -14,8 +14,9 @@ router.get('/', settingsController.getSettings);
 // حماية باقي المسارات: يجب تسجيل الدخول أولاً
 router.use(authenticate);
 
-// تصدير النسخة الاحتياطية لقاعدة البيانات (للأدمن فقط)
+// تصدير واستعادة النسخة الاحتياطية لقاعدة البيانات (للأدمن فقط)
 router.get('/backup', authorize(['ADMIN', 'SUPER_ADMIN']), settingsController.exportBackup);
+router.post('/restore', authorize(['ADMIN', 'SUPER_ADMIN']), settingsController.restoreBackup);
 
 // السماح فقط لـ (الاستقبال، الأدمن، السوبر أدمن) بتعديل الإعدادات
 router.put('/', authorize(['RECEPTION', 'ADMIN', 'SUPER_ADMIN']), settingsController.updateSettings);

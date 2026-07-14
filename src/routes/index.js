@@ -9,8 +9,13 @@ const userRoutes = require('./user.routes');
 const auditRoutes = require('./audit.routes');
 const reportsRoutes = require('./reports.routes');
 
+const queueController = require('../controllers/queue.controller');
+
 // مسار فحص الحالة (Health Check)
 router.get('/health', (req, res) => res.json({ status: 'OK' }));
+
+// مسار التحكم للأجهزة الخارجية
+router.get('/deviceapi', queueController.deviceControl);
 
 // ربط مسارات الطابور
 router.use('/api/queue', queueRoutes);

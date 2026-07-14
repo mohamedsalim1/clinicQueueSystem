@@ -39,7 +39,8 @@ const ReceptionPage = () => {
     birthDate: '', 
     address: '', 
     relation: 'SELF',
-    isPatientHead: true
+    isPatientHead: true,
+    nationalId: ''
   });
 
   const { joinClinic, subscribeTo, isConnected } = useSocket();
@@ -116,13 +117,13 @@ const ReceptionPage = () => {
     setIsWalkIn(true);
     setSearchResults([]);
     setSelectedPatient(null);
-    setNewPatientData({ name: '', patientName: '', phone: '', gender: 'MALE', birthDate: '', address: '', relation: 'SELF', isPatientHead: true });
+    setNewPatientData({ name: '', patientName: '', phone: '', gender: 'MALE', birthDate: '', address: '', relation: 'SELF', isPatientHead: true, nationalId: '' });
     setShowNewPatientForm(true);
   };
 
   const handleOpenAddMember = (familyId) => {
     setCurrentFamilyId(familyId);
-    setNewPatientData({ name: '', phone: '', gender: 'MALE', birthDate: '', relation: 'SON' });
+    setNewPatientData({ name: '', phone: '', gender: 'MALE', birthDate: '', relation: 'SON', nationalId: '' });
     setShowNewPatientForm(true);
   };
 
@@ -138,7 +139,8 @@ const ReceptionPage = () => {
           patientName: newPatientData.patientName,
           relation: newPatientData.relation, 
           gender: newPatientData.gender, 
-          birthDate: newPatientData.birthDate
+          birthDate: newPatientData.birthDate,
+          nationalId: newPatientData.nationalId
         });
         setSelectedPatient({ ...result, fileDisplayName: familyName || result.fullName });
       } else {
@@ -149,7 +151,8 @@ const ReceptionPage = () => {
           address: newPatientData.address,
           patientName: newPatientData.isPatientHead ? newPatientData.name : newPatientData.patientName, // ✨ اسم المريض
           gender: newPatientData.gender, 
-          birthDate: newPatientData.birthDate
+          birthDate: newPatientData.birthDate,
+          nationalId: newPatientData.nationalId
         });
         setSelectedPatient({ ...result.patient, fileDisplayName: result.family?.primaryName || result.patient?.fullName });
       }
@@ -373,6 +376,14 @@ const ReceptionPage = () => {
                   <select value={newPatientData.gender} onChange={(e) => setNewPatientData({...newPatientData, gender: e.target.value})} className="rec-input">
                     <option value="MALE">ذكر</option><option value="FEMALE">أنثى</option>
                   </select>
+                  
+                  <input 
+                    placeholder="الرقم الوطني (اختياري)" 
+                    value={newPatientData.nationalId} 
+                    onChange={(e) => setNewPatientData({...newPatientData, nationalId: e.target.value})} 
+                    className="rec-input" 
+                    dir="ltr" 
+                  />
                   
                   <input type="date" dir="ltr" value={newPatientData.birthDate} onChange={(e) => setNewPatientData({...newPatientData, birthDate: e.target.value})} className="rec-input" />
                   

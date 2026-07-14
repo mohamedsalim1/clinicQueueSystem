@@ -246,7 +246,7 @@ CREATE INDEX "Patient_familyId_idx" ON "Patient"("familyId");
 CREATE UNIQUE INDEX "Visit_ticketId_key" ON "Visit"("ticketId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "QueueTicket_fullNumber_key" ON "QueueTicket"("fullNumber");
+CREATE INDEX "QueueTicket_fullNumber_key" ON "QueueTicket"("fullNumber");
 
 -- CreateIndex
 CREATE INDEX "QueueTicket_clinicId_status_idx" ON "QueueTicket"("clinicId", "status");

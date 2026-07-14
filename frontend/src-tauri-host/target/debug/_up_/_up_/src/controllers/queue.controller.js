@@ -97,9 +97,9 @@ const resolveClinicAudioFile = (audioKey) => {
     'general': 'generalInternalClinic',
     'a': 'generalInternalClinic',
 
-    'babyandfeedclinic': 'babyAndFeedClinic',
-    'pediatrics': 'babyAndFeedClinic',
-    'b': 'babyAndFeedClinic',
+    'babyclinic': 'babyClinic',
+    'pediatrics': 'babyClinic',
+    'b': 'babyClinic',
 
     'vaccinationclinic': 'vaccinationClinic',
     'vaccination': 'vaccinationClinic',
@@ -131,7 +131,15 @@ const resolveClinicAudioFile = (audioKey) => {
 
     'dentalclinic': 'dentalClinic',
     'dental': 'dentalClinic',
-    'j': 'dentalClinic'
+    'j': 'dentalClinic',
+
+    'generalsurgeryclinic': 'generalSurgeryClinic',
+    'surgery': 'generalSurgeryClinic',
+    'k': 'generalSurgeryClinic',
+
+    'feedclinic': 'feedClinic',
+    'nutrition': 'feedClinic',
+    'l': 'feedClinic'
   };
 
   return map[key] || audioKey;

@@ -41,6 +41,18 @@
 }
 .rec-nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.9); }
 .rec-nav-item.active { background: var(--clr-primary); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,.4); }
+.rec-nav-item.doctor-mobile-entry {
+  margin-top: 0.25rem;
+  background: rgba(20, 184, 166, 0.14);
+  color: #99f6e4;
+  border: 1px solid rgba(45, 212, 191, 0.28);
+}
+.rec-nav-item.doctor-mobile-entry:hover,
+.rec-nav-item.doctor-mobile-entry.active {
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35);
+}
 
 .rec-conn-status {
   display: flex; align-items: center; gap: 0.5rem;

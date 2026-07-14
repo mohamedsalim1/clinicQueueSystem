@@ -1,20 +1,20 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const morgan = require('morgan');
 const routes = require('./routes');
 const errorHandler = require('./middlewares/error.middleware');
-const { apiLimiter } = require('./middlewares/rateLimit.middleware');
 const logger = require('./utils/logger');
 
 const app = express();
 
-// Security Middlewares
-// app.use(helmet());
-app.use(cors());
-
-// Rate Limiting on API routes
-// app.use('/api/', apiLimiter);
+// --- CORS: سماح بالوصول الداخلي مع تخزين طلبات Preflight لمدة 24 ساعة
+// لا توجد قيود معدل طلبات — النظام داخلي ولا يمكن الوصول إليه إلا من الشبكة الداخلية
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400 // تخزين مؤقت لطلبات OPTIONS لمدة 24 ساعة — يقلل زمن الاستجابة
+}));
 
 // Logging Middleware
 app.use(morgan('combined', {
@@ -27,8 +27,7 @@ app.use(morgan('combined', {
 app.use(express.json());
 
 // Health check endpoint
-const { PrismaClient } = require('@prisma/client');
-const healthPrisma = new PrismaClient();
+const prisma = require('./config/prisma');
 const os = require('os');
 
 app.get('/health', async (req, res) => {
@@ -41,11 +40,13 @@ app.get('/health', async (req, res) => {
   };
 
   try {
-    await healthPrisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     status.database = 'CONNECTED';
   } catch (err) {
     status.database = 'DISCONNECTED';
-    status.dbError = err.message;
+    // إرسال رسالة الخطأ الحقيقية للواجهة الأمامية لنعرف السبب
+    status.dbError = err.message; 
+    console.error(`[Health Check] DB Error: ${err.message}`);
   }
 
   try {

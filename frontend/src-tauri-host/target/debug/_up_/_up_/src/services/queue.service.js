@@ -39,7 +39,7 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
   if (!audioKey) {
     const p = String(prefix).trim().toUpperCase();
     if (p === 'A') return 'generalInternalClinic';
-    if (p === 'B') return 'babyAndFeedClinic';
+    if (p === 'B') return 'babyClinic';
     if (p === 'C') return 'vaccinationClinic';
     if (p === 'D') return 'chronicDiseasesClinic';
     if (p === 'E') return 'orthopedicClinic';
@@ -48,6 +48,8 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
     if (p === 'H') return 'laboratory';
     if (p === 'I') return 'damadClinic';
     if (p === 'J') return 'dentalClinic';
+    if (p === 'K') return 'generalSurgeryClinic';
+    if (p === 'L') return 'feedClinic';
     return 'generalInternalClinic';
   }
 
@@ -59,9 +61,9 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
     'general': 'generalInternalClinic',
     'a': 'generalInternalClinic',
 
-    'babyandfeedclinic': 'babyAndFeedClinic',
-    'pediatrics': 'babyAndFeedClinic',
-    'b': 'babyAndFeedClinic',
+    'babyclinic': 'babyClinic',
+    'pediatrics': 'babyClinic',
+    'b': 'babyClinic',
 
     'vaccinationclinic': 'vaccinationClinic',
     'vaccination': 'vaccinationClinic',
@@ -93,7 +95,14 @@ const mapClinicAudioKey = (audioKey, prefix = '') => {
 
     'dentalclinic': 'dentalClinic',
     'dental': 'dentalClinic',
-    'j': 'dentalClinic'
+    'j': 'dentalClinic',
+    'generalsurgeryclinic': 'generalSurgeryClinic',
+    'surgery': 'generalSurgeryClinic',
+    'k': 'generalSurgeryClinic',
+
+    'feedclinic': 'feedClinic',
+    'nutrition': 'feedClinic',
+    'l': 'feedClinic'
   };
 
   return map[key] || audioKey;

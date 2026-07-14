@@ -16,7 +16,7 @@ async function main() {
   // audioKey يجب أن يطابق اسم الملف في public/audio/clinics/ بدون الامتداد .wav
   const clinicsData = [
     { id: '1',  name: 'عيادة الداخلية العامة',  nameAr: 'Internal Medicine',    prefix: 'A', audioKey: 'generalInternalClinic' },
-    { id: '2',  name: 'عيادة الأطفال والتغذية', nameAr: 'Pediatrics & Nutrition', prefix: 'B', audioKey: 'babyAndFeedClinic'     },
+    { id: '2',  name: 'عيادة الأطفال', nameAr: 'Pediatrics', prefix: 'B', audioKey: 'babyClinic'     },
     { id: '3',  name: 'عيادة اللقاح',           nameAr: 'Vaccination',            prefix: 'C', audioKey: 'vaccinationClinic'    },
     { id: '4',  name: 'عيادة الأمراض المزمنة', nameAr: 'Chronic Diseases',       prefix: 'D', audioKey: 'chronicDiseasesClinic' },
     { id: '5',  name: 'عيادة العظمية',          nameAr: 'Orthopedics',            prefix: 'E', audioKey: 'orthopedicClinic'     },
@@ -26,6 +26,7 @@ async function main() {
     { id: '9',  name: 'عيادة الضماد',           nameAr: 'Dressing',               prefix: 'I', audioKey: 'damadClinic'          },
     { id: '10', name: 'عيادة الأسنان',          nameAr: 'Dental',                 prefix: 'J', audioKey: 'dentalClinic'         },
     { id: '11', name: 'عيادة الجراحة العامة',   nameAr: 'General Surgery',        prefix: 'K', audioKey: 'generalSurgeryClinic' },
+    { id: '12', name: 'عيادة التغذية',          nameAr: 'Nutrition',              prefix: 'L', audioKey: 'feedClinic' },
   ];
 
   for (const clinic of clinicsData) {
@@ -74,11 +75,11 @@ async function main() {
 
   // ——— 4. إعدادات النظام الافتراضية (Key-Value) ———
   const settingsData = [
-    { key: 'ticker_text', value: 'مركز داريا الطبي يرحب بكم • يرجى الالتزام بالدور • نتمنى لكم الشفاء العاجل' },
-    { key: 'clinic_title', value: 'مركز داريا الطبي' },
+    { key: 'ticker_text', value: 'مركز داريا الطبي الإسعافي يرحب بكم • يرجى الالتزام بالدور • نتمنى لكم الشفاء العاجل' },
+    { key: 'clinic_title', value: 'مركز داريا الطبي الإسعافي' },
     { key: 'clinic_subtitle', value: 'Daraya Medical Center' },
     { key: 'footer_msg', value: 'يرجى انتظار ظهور رقمك على شاشة العرض' },
-    { key: 'printer_name', value: 'Thermal_Printer' },
+    { key: 'printer_name', value: '10.0.0.2' },
     { key: 'audio_enabled', value: 'true' },
     { key: 'master_display_ip', value: '0.0.0.0' },
     { key: 'reset_policy', value: 'daily' },

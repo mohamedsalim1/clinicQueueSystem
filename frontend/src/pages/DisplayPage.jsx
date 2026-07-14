@@ -62,7 +62,6 @@ const formatHijriDate = (date) => {
   return `${arabicNumber.format(day)} ${HIJRI_MONTHS[month - 1]} ${arabicNumber.format(year)} هـ`;
 };
 
-// ——— ساعة رقمية ———
 const Clock = () => {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -293,7 +292,7 @@ const DisplayPage = () => {
     }
     const interval = setInterval(() => {
       setCurrentPage((prev) => (prev + 1) % totalPages);
-    }, 8000); // الانتقال كل 8 ثوانٍ
+    }, 5000); // الانتقال كل 5 ثوانٍ
     return () => clearInterval(interval);
   }, [allClinicsState.length, totalPages]);
 

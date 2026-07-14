@@ -173,6 +173,37 @@ const SettingsPage = () => {
     }
   };
 
+  const handleRestoreBackup = () => {
+    if (!window.confirm(
+      '⚠️ تحذير: سيتم حذف جميع البيانات الحالية واستبدالها بمحتوى ملف النسخة الاحتياطية.\n\n' +
+      'هذا الإجراء لا يمكن التراجع عنه.\n\n' +
+      'هل أنت متأكد من المتابعة؟'
+    )) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        addToast('جاري قراءة ملف النسخة الاحتياطية...', 'info');
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        addToast('جاري استعادة قاعدة البيانات... قد يستغرق هذا دقيقة.', 'info');
+        await apiClient.post('/settings/restore', backup);
+        addToast('✅ تمت استعادة قاعدة البيانات بنجاح. سيتم إعادة تحميل الصفحة.', 'success');
+        setTimeout(() => window.location.reload(), 2500);
+      } catch (err) {
+        const msg = err.response?.data?.message || 'فشل استعادة النسخة الاحتياطية';
+        addToast(`❌ ${msg}`, 'error');
+      }
+    };
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
+
     // ✨ تغيير كلمة المرور
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -374,6 +405,7 @@ const SettingsPage = () => {
             {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>
 
+        {['ADMIN', 'SUPER_ADMIN', 'RECEPTION'].includes(currentUser?.role) && (
           <button
             className="btn btn-danger"
             onClick={handleReset}
@@ -382,8 +414,9 @@ const SettingsPage = () => {
           >
             {isResetting ? 'جاري الإعادة...' : 'إعادة ضبط جميع الطوابير'}
           </button>
+          )}
 
-          {['ADMIN', 'SUPER_ADMIN'].includes(currentUser?.role) && (
+          {['ADMIN', 'SUPER_ADMIN', 'RECEPTION'].includes(currentUser?.role) && (
             <button
               className="btn"
               onClick={handleExportBackup}
@@ -398,6 +431,24 @@ const SettingsPage = () => {
               }}
             >
               💾 تصدير نسخة احتياطية (Backup)
+            </button>
+          )}
+
+          {['ADMIN', 'SUPER_ADMIN'].includes(currentUser?.role) && (
+            <button
+              className="btn"
+              onClick={handleRestoreBackup}
+              style={{ 
+                minWidth: '200px', 
+                background: '#d97706', 
+                color: '#fff', 
+                border: 'none',
+                borderRadius: 'var(--rad-sm)',
+                cursor: 'pointer',
+                fontWeight: 700
+              }}
+            >
+              ♻️ استعادة نسخة احتياطية
             </button>
           )}
 

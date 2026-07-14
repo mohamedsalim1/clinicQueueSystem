@@ -38,10 +38,16 @@ class PrintService {
     this.isPrinting = true;
 
     try {
+      // التحقق من وجود Tauri وأمر الطباعة
       if (this.isTauri()) {
-        return await this._printViaTauri(ticketData, settings);
+        const invoke = window.__TAURI__.core?.invoke || window.__TAURI__.invoke;
+        if (invoke) {
+          console.log('[Print] Tauri environment detected, attempting to print...');
+          return await this._printViaTauri(ticketData, settings);
+        }
       }
 
+      console.log('[Print] Not in Tauri environment or print command unavailable');
       return this._thermalPrinterUnavailable(ticketData, settings);
     } finally {
       this.isPrinting = false;
@@ -50,32 +56,46 @@ class PrintService {
 
 /** ——— طباعة ESC/POS عبر Tauri باستخدام طريقة الصورة (Raster Graphics) ——— */
   async _printViaTauri(ticketData, settings) {
-    const printerWidth = settings.printerWidth || '80mm';
+    try {
+      const printerWidth = settings.printerWidth || '80mm';
 
-    // 1. رسم التذكرة بالكامل على Canvas لمعالجة النصوص واللغة العربية
-    const canvas = renderTicketToCanvas(ticketData, settings, printerWidth);
+      console.log('[Print] Rendering ticket to canvas...');
+      // 1. رسم التذكرة بالكامل على Canvas لمعالجة النصوص واللغة العربية
+      const canvas = renderTicketToCanvas(ticketData, settings, printerWidth);
 
-    // 2. تحويل الـ Canvas إلى بايتات صورة طابعة حرارية (ESC/POS GS v 0)
-    const imageBytes = canvasToEscPosBytes(canvas);
+      console.log('[Print] Converting canvas to ESC/POS bytes...');
+      // 2. تحويل الـ Canvas إلى بايتات صورة طابعة حرارية (ESC/POS GS v 0)
+      const imageBytes = canvasToEscPosBytes(canvas);
 
-    // 3. دمج أمر التهيئة (ESC @) وبايتات الصورة وأوامر التغذية والقطع
-    const initBytes = new Uint8Array([0x1B, 0x40]);
-    const cutBytes = new Uint8Array([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x01]); // 3 أسطر فراغ ثم قطع
+      // 3. دمج أمر التهيئة (ESC @) وبايتات الصورة وأوامر التغذية والقطع
+      const initBytes = new Uint8Array([0x1B, 0x40]);
+      const cutBytes = new Uint8Array([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x01]); // 3 أسطر فراغ ثم قطع
 
-    const combinedBytes = new Uint8Array(initBytes.length + imageBytes.length + cutBytes.length);
-    combinedBytes.set(initBytes, 0);
-    combinedBytes.set(imageBytes, initBytes.length);
-    combinedBytes.set(cutBytes, initBytes.length + imageBytes.length);
+      const combinedBytes = new Uint8Array(initBytes.length + imageBytes.length + cutBytes.length);
+      combinedBytes.set(initBytes, 0);
+      combinedBytes.set(imageBytes, initBytes.length);
+      combinedBytes.set(cutBytes, initBytes.length + imageBytes.length);
 
-    const invoke = window.__TAURI__.core?.invoke || window.__TAURI__.invoke;
+      console.log(`[Print] Sending ${combinedBytes.length} bytes to printer: ${this.printerName}`);
+      const invoke = window.__TAURI__.core?.invoke || window.__TAURI__.invoke;
 
-    // إرسال البايتات كمصفوفة أرقام لضمان تسلسلها السليم في Tauri JSON-RPC
-    await invoke('print_raw_data', {
-      printerName: this.printerName,
-      data: Array.from(combinedBytes),
-    });
+      // إرسال البايتات كمصفوفة أرقام لضمان تسلسلها السليم في Tauri JSON-RPC
+      await invoke('print_raw_data', {
+        printerName: this.printerName,
+        data: Array.from(combinedBytes),
+      });
 
-    return { success: true, mode: 'tauri-escpos-image' };
+      console.log('[Print] Print job sent successfully!');
+      return { success: true, mode: 'tauri-escpos-image' };
+    } catch (error) {
+      console.error('[Print] Error during Tauri printing:', error);
+      return { 
+        success: false, 
+        mode: 'tauri-escpos-image',
+        reason: 'print-error',
+        error: error.message || String(error)
+      };
+    }
   }
 
   _thermalPrinterUnavailable(ticketData, settings = {}) {

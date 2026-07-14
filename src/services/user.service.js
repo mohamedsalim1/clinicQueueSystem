@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 const getAllUsers = async () => {
   // ✨ إخفاء SUPER_ADMIN تماماً من القائمة التي تعرض للأدمن

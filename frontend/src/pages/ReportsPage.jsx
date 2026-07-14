@@ -15,6 +15,8 @@ const tabs = [
 
 const formatNumber = (value) => new Intl.NumberFormat('ar-SY').format(value || 0);
 
+const formatDateTime = (value) => value ? new Date(value).toLocaleString('ar-SY') : '-';
+
 const percent = (value, total) => {
   if (!total) return 0;
   return Math.round((value / total) * 100);
@@ -196,11 +198,13 @@ const ReportsPage = () => {
                 <KpiCard title="مرضى جدد" value={formatNumber(reportData.kpis.newPatientsCount)} note={`من أصل ${formatNumber(reportData.kpis.totalPatientsCount)} ملف`} />
                 <KpiCard title="متوسط الانتظار" value={`${formatNumber(reportData.kpis.avgWaitTimeMinutes)} د`} note="من إصدار الرقم حتى النداء" />
                 <KpiCard title="متوسط المعاينة" value={`${formatNumber(reportData.kpis.avgExamTimeMinutes)} د`} note="من النداء حتى الإتمام" />
+                <KpiCard title="نسبة الإتمام" value={`${formatNumber(reportData.kpis.completionRate)}%`} note={reportData.insights?.serviceSignal || 'قراءة تشغيلية'} />
               </div>
 
               <section className="admin-section">
                 <div className="admin-section-header">
                   <h2 className="admin-section-title">العيادات الأعلى مراجعة</h2>
+                  <span className="admin-badge teal">الذروة {reportData.insights?.busiestHour || '-'}</span>
                 </div>
                 <div style={{ padding: '1rem' }}>
                   <BarList rows={reportData.popularClinics.slice(0, 8)} labelKey="name" />
@@ -304,18 +308,72 @@ const ReportsPage = () => {
           )}
 
           {activeTab === 'patients' && (
-            <section className="admin-section">
-              <div className="admin-section-header">
-                <h2 className="admin-section-title">ديموغرافية المرضى</h2>
-                <span className="admin-badge teal">{formatNumber(totalPatientsByCohort)} ملف نشط</span>
-              </div>
-              <div style={{ padding: '1rem' }}>
-                <BarList rows={reportData.patientCohorts.map((item) => ({
-                  ...item,
-                  name: `${item.cohort} - ${item.gender === 'MALE' ? 'ذكور' : 'إناث'}`
-                }))} />
-              </div>
-            </section>
+            <>
+              <section className="admin-section">
+                <div className="admin-section-header">
+                  <div>
+                    <h2 className="admin-section-title">زيارات المرضى والأدوار</h2>
+                    <p className="admin-subtitle">تفصيل المراجعين حسب العيادة وتوقيت أخذ الدور ضمن الفترة المحددة.</p>
+                  </div>
+                  <span className="admin-badge teal">{formatNumber(reportData.patientVisitRows?.length || 0)} سجل</span>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-table admin-table-dense patient-visits-report-table">
+                    <thead>
+                      <tr>
+                        <th>اسم المريض</th>
+                        <th>العمر</th>
+                        <th>الجنس</th>
+                        <th>رقم الموبايل</th>
+                        <th>العنوان</th>
+                        <th>العيادة التي ارتادها</th>
+                        <th>تاريخ ارتياد العيادة</th>
+                        <th>رقم الدور</th>
+                        <th>وقت النداء</th>
+                        <th>حالة الدور</th>
+                        <th>الطبيب</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(reportData.patientVisitRows || []).map((row) => (
+                        <tr key={row.id}>
+                          <td>
+                            <strong>{row.patientName}</strong>
+                            <div className="admin-muted">ملف: {row.fileNumber || '-'}</div>
+                          </td>
+                          <td>{row.patientAge ?? '-'}</td>
+                          <td>{row.patientGender}</td>
+                          <td dir="ltr">{row.mobilePhone || '-'}</td>
+                          <td className="admin-table-address">{row.address || '-'}</td>
+                          <td>{row.clinicName}</td>
+                          <td>{formatDateTime(row.visitDate)}</td>
+                          <td><span className="admin-badge blue">{row.queueNumber || '-'}</span></td>
+                          <td>{formatDateTime(row.calledAt)}</td>
+                          <td><span className={`admin-badge ${row.status === 'COMPLETED' ? 'green' : row.status === 'SKIPPED' || row.status === 'CANCELLED' ? 'red' : 'amber'}`}>{row.statusLabel}</span></td>
+                          <td>{row.doctorName || '-'}</td>
+                        </tr>
+                      ))}
+                      {(reportData.patientVisitRows || []).length === 0 && (
+                        <tr><td colSpan="11"><div className="admin-empty">لا توجد زيارات مرضى ضمن الفترة المحددة.</div></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="admin-section">
+                <div className="admin-section-header">
+                  <h2 className="admin-section-title">ديموغرافية المرضى</h2>
+                  <span className="admin-badge teal">{formatNumber(totalPatientsByCohort)} ملف نشط</span>
+                </div>
+                <div style={{ padding: '1rem' }}>
+                  <BarList rows={reportData.patientCohorts.map((item) => ({
+                    ...item,
+                    name: `${item.cohort} - ${item.gender === 'MALE' ? 'ذكور' : 'إناث'}`
+                  }))} />
+                </div>
+              </section>
+            </>
           )}
 
           {activeTab === 'audit' && (

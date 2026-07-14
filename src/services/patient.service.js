@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 /**
  * البحث عن عائلة وأفرادها برقم الهاتف
@@ -47,7 +46,7 @@ const searchPatients = async (query) => {
  * إنشاء عائلة جديدة مع مريض (رب الأسرة غالباً)
  */
 const createFamilyWithPatient = async (data) => {
-  const { primaryPhone, primaryName, address, patientName, gender, birthDate } = data;
+  const { primaryPhone, primaryName, address, patientName, gender, birthDate, nationalId } = data;
 
   // ✨ دعم الدخول المباشر: توليد رقم هاتف مؤقت إذا لم يُعطَ
   const resolvedPhone = (primaryPhone && primaryPhone.trim())
@@ -91,6 +90,7 @@ const createFamilyWithPatient = async (data) => {
         gender: gender || 'MALE',
         birthDate: birthDate ? new Date(birthDate) : null,
         relation: 'SELF', // أول مريض في العائلة هو غالباً رب الأسرة
+        nationalId: nationalId || null,
         familyId: family.id
       }
     });
@@ -103,7 +103,7 @@ const createFamilyWithPatient = async (data) => {
  * إضافة مريض جديد لعائلة موجودة
  */
 const addPatientToFamily = async (familyId, data) => {
-  const { patientName, relation, gender, birthDate } = data;
+  const { patientName, relation, gender, birthDate, nationalId } = data;
 
   return prisma.$transaction(async (tx) => {
     const currentYear = new Date().getFullYear();
@@ -129,6 +129,7 @@ const addPatientToFamily = async (familyId, data) => {
         gender: gender || 'MALE',
         birthDate: birthDate ? new Date(birthDate) : null,
         relation: relation || 'OTHER',
+        nationalId: nationalId || null,
         familyId
       }
     });
@@ -182,7 +183,7 @@ const getAllFamilies = async (searchQuery = '', page = 1, limit = 10) => {
 };
 
 const updatePatient = async (patientId, data) => {
-  const { fullName, relation, gender, birthDate, fileNumber } = data;
+  const { fullName, relation, gender, birthDate, fileNumber, nationalId } = data;
   
   const nameParts = fullName.trim().split(' ');
   const firstName = nameParts[0] || '';
@@ -199,7 +200,8 @@ const updatePatient = async (patientId, data) => {
       relation,
       gender,
       birthDate: birthDate ? new Date(birthDate) : null,
-      fileNumber
+      fileNumber,
+      nationalId: nationalId || null
     }
   });
 };
